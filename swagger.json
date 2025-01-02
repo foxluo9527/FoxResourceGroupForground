@@ -1,0 +1,5381 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Fox Admin API Documentation",
+    "version": "1.0.0",
+    "description": "Fox Admin 系统 API 文档",
+    "contact": {
+      "name": "Fox Admin Team",
+      "email": "admin@example.com"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:9000",
+      "description": "开发环境"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "Album": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "专辑ID"
+          },
+          "title": {
+            "type": "string",
+            "description": "专辑标题"
+          },
+          "cover_image": {
+            "type": "string",
+            "description": "封面图URL"
+          },
+          "description": {
+            "type": "string",
+            "description": "专辑简介"
+          },
+          "release_date": {
+            "type": "string",
+            "format": "date",
+            "description": "发行日期"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "studio",
+              "live",
+              "compilation",
+              "remix",
+              "single",
+              "ep"
+            ],
+            "description": "专辑类型"
+          },
+          "language": {
+            "type": "string",
+            "description": "语言"
+          },
+          "publisher": {
+            "type": "string",
+            "description": "发行公司"
+          },
+          "is_featured": {
+            "type": "boolean",
+            "description": "是否推荐"
+          },
+          "duration": {
+            "type": "integer",
+            "description": "总时长(秒)"
+          },
+          "track_count": {
+            "type": "integer",
+            "description": "音轨数量"
+          }
+        }
+      },
+      "Novel": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "小说ID"
+          },
+          "title": {
+            "type": "string",
+            "description": "小说标题"
+          },
+          "description": {
+            "type": "string",
+            "description": "小说简介"
+          },
+          "cover_image": {
+            "type": "string",
+            "description": "封面图URL"
+          },
+          "author": {
+            "type": "string",
+            "description": "作者名称"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ongoing",
+              "completed",
+              "hiatus"
+            ],
+            "description": "连载状态"
+          },
+          "genre": {
+            "type": "string",
+            "description": "小说类型"
+          },
+          "is_vip": {
+            "type": "boolean",
+            "description": "是否VIP章节"
+          },
+          "price": {
+            "type": "number",
+            "description": "价格"
+          },
+          "word_count": {
+            "type": "integer",
+            "description": "总字数"
+          }
+        }
+      },
+      "Post": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "帖子ID"
+          },
+          "title": {
+            "type": "string",
+            "description": "帖子标题"
+          },
+          "content": {
+            "type": "string",
+            "description": "帖子资源"
+          },
+          "author_id": {
+            "type": "integer",
+            "description": "作者ID"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "published",
+              "hidden"
+            ],
+            "description": "帖子状态"
+          },
+          "view_count": {
+            "type": "integer",
+            "description": "浏览量"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "创建时间"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "更新时间"
+          }
+        }
+      },
+      "Video": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "视频ID"
+          },
+          "title": {
+            "type": "string",
+            "description": "视频标题"
+          },
+          "description": {
+            "type": "string",
+            "description": "视频简介"
+          },
+          "cover_image": {
+            "type": "string",
+            "description": "封面图URL"
+          },
+          "url": {
+            "type": "string",
+            "description": "视频URL"
+          },
+          "duration": {
+            "type": "integer",
+            "description": "视频时长(秒)"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "published",
+              "hidden"
+            ],
+            "description": "视频状态"
+          },
+          "category": {
+            "type": "string",
+            "description": "视频分类"
+          },
+          "is_featured": {
+            "type": "boolean",
+            "description": "是否推荐"
+          },
+          "view_count": {
+            "type": "integer",
+            "description": "播放次数"
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/api/admin/albums": {
+      "get": {
+        "summary": "获取专辑列表",
+        "tags": [
+          "管理端/资源/音乐/专辑"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PageParam"
+          },
+          {
+            "$ref": "#/components/parameters/LimitParam"
+          },
+          {
+            "in": "query",
+            "name": "title",
+            "schema": {
+              "type": "string"
+            },
+            "description": "专辑标题关键词"
+          },
+          {
+            "in": "query",
+            "name": "type",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "studio",
+                "live",
+                "compilation",
+                "remix",
+                "single",
+                "ep"
+              ]
+            },
+            "description": "专辑类型"
+          },
+          {
+            "in": "query",
+            "name": "language",
+            "schema": {
+              "type": "string"
+            },
+            "description": "语言"
+          }
+        ]
+      },
+      "post": {
+        "summary": "创建专辑",
+        "tags": [
+          "管理端/资源/音乐/专辑"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "title",
+                  "type"
+                ],
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "description": "专辑标题"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "专辑简介"
+                  },
+                  "release_date": {
+                    "type": "string",
+                    "format": "date",
+                    "description": "发行日期"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "studio",
+                      "live",
+                      "compilation",
+                      "remix",
+                      "single",
+                      "ep"
+                    ],
+                    "description": "专辑类型"
+                  },
+                  "cover_image": {
+                    "type": "string",
+                    "description": "封面图URL"
+                  },
+                  "language": {
+                    "type": "string",
+                    "description": "语言"
+                  },
+                  "publisher": {
+                    "type": "string",
+                    "description": "发行公司"
+                  },
+                  "is_featured": {
+                    "type": "boolean",
+                    "description": "是否推荐"
+                  },
+                  "artistId": {
+                    "type": "integer",
+                    "description": "艺术家ID"
+                  },
+                  "tags": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "标签名称列表"
+                  },
+                  "tracks": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    },
+                    "description": "音乐ID列表"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/albums/{id}": {
+      "get": {
+        "summary": "获取专辑详情",
+        "tags": [
+          "管理端/资源/音乐/专辑"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "专辑ID"
+          }
+        ]
+      },
+      "put": {
+        "summary": "更新专辑信息",
+        "tags": [
+          "管理端/资源/音乐/专辑"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "专辑ID"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "release_date": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "studio",
+                      "live",
+                      "compilation",
+                      "remix",
+                      "single",
+                      "ep"
+                    ]
+                  },
+                  "language": {
+                    "type": "string"
+                  },
+                  "publisher": {
+                    "type": "string"
+                  },
+                  "is_featured": {
+                    "type": "boolean"
+                  },
+                  "artistId": {
+                    "type": "integer"
+                  },
+                  "tags": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "tracks": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "删除专辑",
+        "description": "删除专辑及其相关的标签关联、艺术家关联和音乐关联",
+        "tags": [
+          "管理端/资源/音乐/专辑"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "专辑ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "删除成功"
+          },
+          "404": {
+            "description": "专辑不存在"
+          },
+          "500": {
+            "description": "服务器错误"
+          }
+        }
+      }
+    },
+    "/api/admin/announcements": {
+      "get": {
+        "summary": "获取公告列表",
+        "tags": [
+          "管理端/公告"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "页码"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            },
+            "description": "每页数量"
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "draft",
+                "published",
+                "expired"
+              ]
+            },
+            "description": "公告状态"
+          },
+          {
+            "in": "query",
+            "name": "type",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "system",
+                "activity",
+                "maintenance",
+                "update"
+              ]
+            },
+            "description": "公告类型"
+          },
+          {
+            "in": "query",
+            "name": "keyword",
+            "schema": {
+              "type": "string"
+            },
+            "description": "搜索关键词"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          }
+        }
+      },
+      "post": {
+        "summary": "创建公告",
+        "tags": [
+          "管理端/公告"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "title",
+                  "content",
+                  "type"
+                ],
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "description": "公告标题"
+                  },
+                  "content": {
+                    "type": "string",
+                    "description": "公告内容"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "system",
+                      "activity",
+                      "maintenance",
+                      "update"
+                    ],
+                    "description": "公告类型"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "draft",
+                      "published"
+                    ],
+                    "default": "draft",
+                    "description": "公告状态"
+                  },
+                  "priority": {
+                    "type": "integer",
+                    "default": 0,
+                    "description": "优先级"
+                  },
+                  "publish_time": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "发布时间"
+                  },
+                  "expire_time": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "过期时间"
+                  },
+                  "platforms": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "发布平台"
+                  },
+                  "target_users": {
+                    "type": "string",
+                    "enum": [
+                      "all",
+                      "new",
+                      "vip"
+                    ],
+                    "default": "all",
+                    "description": "目标用户群"
+                  },
+                  "show_type": {
+                    "type": "string",
+                    "enum": [
+                      "popup",
+                      "banner",
+                      "notification"
+                    ],
+                    "default": "notification",
+                    "description": "显示类型"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "创建成功"
+          }
+        }
+      }
+    },
+    "/api/admin/announcements/{id}": {
+      "put": {
+        "summary": "更新公告",
+        "tags": [
+          "管理端/公告"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "公告ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "content": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "system",
+                      "activity",
+                      "maintenance",
+                      "update"
+                    ]
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "draft",
+                      "published"
+                    ]
+                  },
+                  "priority": {
+                    "type": "integer"
+                  },
+                  "publish_time": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "expire_time": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "platforms": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "target_users": {
+                    "type": "string",
+                    "enum": [
+                      "all",
+                      "new",
+                      "vip"
+                    ]
+                  },
+                  "show_type": {
+                    "type": "string",
+                    "enum": [
+                      "popup",
+                      "banner",
+                      "notification"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新成功"
+          }
+        }
+      },
+      "delete": {
+        "summary": "删除公告",
+        "tags": [
+          "管理端/公告"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "公告ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "删除成功"
+          }
+        }
+      }
+    },
+    "/api/admin/announcements/statistics/summary": {
+      "get": {
+        "summary": "获取公告统计信息",
+        "tags": [
+          "管理端/公告"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          }
+        }
+      }
+    },
+    "/api/admin/artists/{id}": {
+      "get": {
+        "summary": "获取艺术家详情",
+        "tags": [
+          "管理端/资源/音乐/艺术家"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "艺术家ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Success"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/Artist"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "更新艺术家信息",
+        "tags": [
+          "管理端/资源/音乐/艺术家"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "艺术家ID"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "alias": {
+                    "type": "string"
+                  },
+                  "avatar": {
+                    "type": "string"
+                  },
+                  "cover_image": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "region": {
+                    "type": "string"
+                  },
+                  "birth_date": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "gender": {
+                    "type": "string",
+                    "enum": [
+                      "male",
+                      "female",
+                      "other"
+                    ]
+                  },
+                  "debut_date": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "tags": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "删除艺术家",
+        "description": "删除艺术家及其相关的标签关联、音乐关联和专辑关联",
+        "tags": [
+          "管理端/资源/音乐/艺术家"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "艺术家ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "删除成功"
+          },
+          "404": {
+            "description": "艺术家不存在"
+          },
+          "500": {
+            "description": "服务器错误"
+          }
+        }
+      }
+    },
+    "/api/admin/artists": {
+      "post": {
+        "summary": "创建艺术家",
+        "tags": [
+          "管理端/资源/音乐/艺术家"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "艺术家名称"
+                  },
+                  "alias": {
+                    "type": "string",
+                    "description": "别名"
+                  },
+                  "avatar": {
+                    "type": "string",
+                    "description": "头像URL"
+                  },
+                  "cover_image": {
+                    "type": "string",
+                    "description": "封面图URL"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "艺术家简介"
+                  },
+                  "region": {
+                    "type": "string",
+                    "description": "地区"
+                  },
+                  "birth_date": {
+                    "type": "string",
+                    "format": "date",
+                    "description": "出生日期"
+                  },
+                  "gender": {
+                    "type": "string",
+                    "enum": [
+                      "male",
+                      "female",
+                      "other"
+                    ],
+                    "description": "性别"
+                  },
+                  "debut_date": {
+                    "type": "string",
+                    "format": "date",
+                    "description": "出道日期"
+                  },
+                  "tags": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "标签名称列表"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/auth/login": {
+      "post": {
+        "summary": "管理员登录",
+        "tags": [
+          "管理端/账户"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "username",
+                  "password"
+                ],
+                "properties": {
+                  "username": {
+                    "type": "string",
+                    "example": "admin"
+                  },
+                  "password": {
+                    "type": "string",
+                    "example": "admin123"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "登录成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 200
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "token": {
+                          "type": "string",
+                          "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                        },
+                        "user": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "example": "60d5ecb8b5c9c62b3c7c1b5e"
+                            },
+                            "username": {
+                              "type": "string",
+                              "example": "admin"
+                            },
+                            "role": {
+                              "type": "string",
+                              "example": "admin"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "参数错误"
+          },
+          "401": {
+            "description": "用户名或密码错误"
+          }
+        }
+      }
+    },
+    "/api/admin/auth/grantAdmin": {
+      "post": {
+        "summary": "授权新管理员账号",
+        "tags": [
+          "管理端/账户"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "username",
+                  "password",
+                  "email",
+                  "phone"
+                ],
+                "properties": {
+                  "username": {
+                    "type": "string",
+                    "description": "新管理员的用户名"
+                  },
+                  "password": {
+                    "type": "string",
+                    "description": "新管理员的密码"
+                  },
+                  "email": {
+                    "type": "string",
+                    "description": "新管理员的邮箱"
+                  },
+                  "phone": {
+                    "type": "string",
+                    "description": "新管理员的电话"
+                  },
+                  "role": {
+                    "type": "string",
+                    "description": "新管理员的角色（默认为 'admin'）"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "新管理员账号已创建"
+          },
+          "400": {
+            "description": "请求参数错误或用户名已存在"
+          },
+          "500": {
+            "description": "服务器错误"
+          }
+        }
+      }
+    },
+    "/api/admin/auth/logout": {
+      "post": {
+        "summary": "管理员登出",
+        "tags": [
+          "管理端/账户"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "登出成功"
+          },
+          "401": {
+            "description": "未登录或 token 已过期"
+          }
+        }
+      }
+    },
+    "/api/admin/configs": {
+      "get": {
+        "summary": "获取系统配置列表",
+        "tags": [
+          "管理端/系统配置"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "category",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "site",
+                "user",
+                "content",
+                "security",
+                "notification",
+                "other"
+              ]
+            },
+            "description": "配置分类"
+          }
+        ]
+      },
+      "post": {
+        "summary": "创建系统配置",
+        "tags": [
+          "管理端/系统配置"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "key",
+                  "value"
+                ],
+                "properties": {
+                  "key": {
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "object"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "category": {
+                    "type": "string",
+                    "enum": [
+                      "site",
+                      "user",
+                      "content",
+                      "security",
+                      "notification",
+                      "other"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/configs/{key}": {
+      "get": {
+        "summary": "获取指定配置",
+        "tags": [
+          "管理端/系统配置"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "配置键名"
+          }
+        ]
+      },
+      "put": {
+        "summary": "更新系统配置",
+        "tags": [
+          "管理端/系统配置"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "配置键名"
+          }
+        ]
+      },
+      "delete": {
+        "summary": "删除系统配置",
+        "tags": [
+          "管理端/系统配置"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "配置键名"
+          }
+        ]
+      }
+    },
+    "/api/admin/logs": {
+      "get": {
+        "summary": "获取管理日志列表",
+        "description": "分页获取管理操作日志，支持多种筛选条件",
+        "tags": [
+          "管理端/日志"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "页码"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "每页数量"
+          },
+          {
+            "in": "query",
+            "name": "admin_id",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "管理员ID"
+          },
+          {
+            "in": "query",
+            "name": "action",
+            "schema": {
+              "type": "string"
+            },
+            "description": "操作类型"
+          },
+          {
+            "in": "query",
+            "name": "target",
+            "schema": {
+              "type": "string"
+            },
+            "description": "操作对象"
+          },
+          {
+            "in": "query",
+            "name": "start_date",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "开始日期"
+          },
+          {
+            "in": "query",
+            "name": "end_date",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "结束日期"
+          }
+        ]
+      }
+    },
+    "/api/admin/logs/statistics": {
+      "get": {
+        "summary": "获取管理日志统计信息",
+        "description": "获取管理操作的统计信息，如各类操作的数量、趋势等",
+        "tags": [
+          "管理端/日志"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "统计天数，默认7天"
+          }
+        ]
+      }
+    },
+    "/api/admin/music-comments": {
+      "get": {
+        "summary": "获取音乐评论列表",
+        "tags": [
+          "管理端/资源/音乐/评论"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "页码"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "每页数量"
+          },
+          {
+            "in": "query",
+            "name": "music_id",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "音乐ID"
+          },
+          {
+            "in": "query",
+            "name": "user_id",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "用户ID"
+          }
+        ]
+      }
+    },
+    "/api/admin/music-comments/batch": {
+      "delete": {
+        "summary": "批量删除音乐评论",
+        "tags": [
+          "管理端/资源/音乐/评论"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    },
+                    "description": "评论ID数组"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/music-comments/{id}": {
+      "delete": {
+        "summary": "删除音乐评论",
+        "tags": [
+          "管理端/资源/音乐/评论"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "评论ID"
+          }
+        ]
+      }
+    },
+    "/api/admin/music": {
+      "post": {
+        "summary": "创建音乐",
+        "description": "创建新的音乐记录，包括基本信息、标签、艺术家和专辑关联",
+        "tags": [
+          "管理端/资源/音乐"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "title",
+                  "url",
+                  "duration"
+                ],
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "description": "音乐标题"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "音乐描述"
+                  },
+                  "url": {
+                    "type": "string",
+                    "description": "音乐文件URL"
+                  },
+                  "cover_image": {
+                    "type": "string",
+                    "description": "封面图片URL"
+                  },
+                  "duration": {
+                    "type": "integer",
+                    "description": "音乐时长（秒）"
+                  },
+                  "track_number": {
+                    "type": "integer",
+                    "description": "音轨编号"
+                  },
+                  "disc_number": {
+                    "type": "integer",
+                    "description": "光盘编号",
+                    "default": 1
+                  },
+                  "genre": {
+                    "type": "string",
+                    "description": "音乐流派"
+                  },
+                  "language": {
+                    "type": "string",
+                    "description": "音乐语言"
+                  },
+                  "lyrics": {
+                    "type": "string",
+                    "description": "歌词内容"
+                  },
+                  "lyrics_type": {
+                    "type": "string",
+                    "enum": [
+                      "embedded",
+                      "lrc",
+                      "external"
+                    ],
+                    "default": "embedded",
+                    "description": "歌词类型"
+                  },
+                  "lyrics_url": {
+                    "type": "string",
+                    "description": "外部歌词URL"
+                  },
+                  "is_explicit": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "是否包含限制内容"
+                  },
+                  "is_featured": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "是否为推荐内容"
+                  },
+                  "tags": {
+                    "type": "array",
+                    "description": "标签名称列表",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "artist_id": {
+                    "type": "integer",
+                    "description": "艺术家ID（不提供则使用佚名艺术家）"
+                  },
+                  "album_id": {
+                    "type": "integer",
+                    "description": "专辑ID（可选）"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "创建成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 200
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "创建音乐成功"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "description": "创建的音乐ID"
+                        }
+                      }
+                    },
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求参数错误"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "500": {
+            "description": "服务器错误"
+          }
+        }
+      },
+      "get": {
+        "summary": "获取音乐列表",
+        "description": "获取音乐列表，支持分页和过滤",
+        "tags": [
+          "管理端/资源/音乐"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "页码"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "每页数量"
+          },
+          {
+            "in": "query",
+            "name": "tag_id",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "标签ID过滤"
+          },
+          {
+            "in": "query",
+            "name": "artist_id",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "艺术家ID过滤"
+          },
+          {
+            "in": "query",
+            "name": "album_id",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "专辑ID过滤"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 200
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "获取音乐列表成功"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "list": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "integer"
+                              },
+                              "title": {
+                                "type": "string"
+                              },
+                              "url": {
+                                "type": "string"
+                              },
+                              "cover_image": {
+                                "type": "string"
+                              },
+                              "duration": {
+                                "type": "integer"
+                              },
+                              "tags": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object"
+                                }
+                              },
+                              "artists": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object"
+                                }
+                              },
+                              "albums": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object"
+                                }
+                              },
+                              "current": null,
+                              "type": "integer"
+                            },
+                            "size": {
+                              "type": "integer"
+                            },
+                            "total": {
+                              "type": "integer"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "500": {
+            "description": "服务器错误"
+          }
+        }
+      }
+    },
+    "/api/admin/music/{id}": {
+      "put": {
+        "summary": "更新音乐",
+        "description": "更新音乐的基本信息、标签、艺术家和专辑关联",
+        "tags": [
+          "管理端/资源/音乐"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "音乐ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "description": "音乐标题"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "音乐描述"
+                  },
+                  "url": {
+                    "type": "string",
+                    "description": "音乐文件URL"
+                  },
+                  "cover_image": {
+                    "type": "string",
+                    "description": "封面图片URL"
+                  },
+                  "duration": {
+                    "type": "integer",
+                    "description": "音乐时长（秒）"
+                  },
+                  "track_number": {
+                    "type": "integer",
+                    "description": "音轨编号"
+                  },
+                  "disc_number": {
+                    "type": "integer",
+                    "description": "光盘编号"
+                  },
+                  "genre": {
+                    "type": "string",
+                    "description": "音乐流派"
+                  },
+                  "language": {
+                    "type": "string",
+                    "description": "音乐语言"
+                  },
+                  "lyrics": {
+                    "type": "string",
+                    "description": "歌词内容"
+                  },
+                  "lyrics_type": {
+                    "type": "string",
+                    "enum": [
+                      "embedded",
+                      "lrc",
+                      "external"
+                    ],
+                    "description": "歌词类型"
+                  },
+                  "lyrics_url": {
+                    "type": "string",
+                    "description": "外部歌词URL"
+                  },
+                  "is_explicit": {
+                    "type": "boolean",
+                    "description": "是否包含限制内容"
+                  },
+                  "is_featured": {
+                    "type": "boolean",
+                    "description": "是否为推荐内容"
+                  },
+                  "tags": {
+                    "type": "array",
+                    "description": "标签名称列表",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "artist_id": {
+                    "type": "integer",
+                    "description": "艺术家ID"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 200
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "更新音乐成功"
+                    },
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求参数错误"
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "音乐不存在"
+          },
+          "500": {
+            "description": "服务器错误"
+          }
+        }
+      },
+      "delete": {
+        "summary": "删除音乐",
+        "description": "删除音乐及其所有关联（标签、艺术家、专辑）",
+        "tags": [
+          "管理端/资源/音乐"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "音乐ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "删除成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 200
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "删除音乐成功"
+                    },
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未授权"
+          },
+          "404": {
+            "description": "音乐不存在"
+          },
+          "500": {
+            "description": "服务器错误"
+          }
+        }
+      }
+    },
+    "/api/admin/novels": {
+      "get": {
+        "summary": "获取小说列表",
+        "tags": [
+          "管理端/资源/小说"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "页码"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            },
+            "description": "每页数量"
+          },
+          {
+            "in": "query",
+            "name": "keyword",
+            "schema": {
+              "type": "string"
+            },
+            "description": "搜索关键词(标题/简介/作者)"
+          },
+          {
+            "in": "query",
+            "name": "author",
+            "schema": {
+              "type": "string"
+            },
+            "description": "作者名称"
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ongoing",
+                "completed",
+                "hiatus"
+              ]
+            },
+            "description": "连载状态"
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "latest",
+                "hot",
+                "rating"
+              ],
+              "default": "latest"
+            },
+            "description": "排序方式"
+          }
+        ]
+      },
+      "post": {
+        "summary": "创建小说",
+        "tags": [
+          "管理端/资源/小说"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "title",
+                  "author"
+                ],
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "coverImage": {
+                    "type": "string"
+                  },
+                  "author": {
+                    "type": "string"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "ongoing",
+                      "completed",
+                      "hiatus"
+                    ]
+                  },
+                  "genre": {
+                    "type": "string"
+                  },
+                  "tags": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    }
+                  },
+                  "isVip": {
+                    "type": "boolean"
+                  },
+                  "price": {
+                    "type": "number"
+                  },
+                  "wordCount": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/novels/{id}": {
+      "put": {
+        "summary": "更新小说",
+        "tags": [
+          "管理端/资源/小说"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "小说ID"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "coverImage": {
+                    "type": "string"
+                  },
+                  "author": {
+                    "type": "string"
+                  },
+                  "status": {
+                    "type": "string"
+                  },
+                  "genre": {
+                    "type": "string"
+                  },
+                  "tags": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    }
+                  },
+                  "isVip": {
+                    "type": "boolean"
+                  },
+                  "price": {
+                    "type": "number"
+                  },
+                  "wordCount": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "删除小说",
+        "tags": [
+          "管理端/资源/小说"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "小说ID"
+          }
+        ]
+      }
+    },
+    "/api/admin/novels/{id}/chapters": {
+      "post": {
+        "summary": "添加章节",
+        "tags": [
+          "管理端/资源/小说"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "小说ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "chapterIndex",
+                  "title",
+                  "content"
+                ],
+                "properties": {
+                  "chapterIndex": {
+                    "type": "integer"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "content": {
+                    "type": "string"
+                  },
+                  "isVip": {
+                    "type": "boolean"
+                  },
+                  "price": {
+                    "type": "number"
+                  },
+                  "wordCount": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/posts": {
+      "get": {
+        "summary": "获取帖子列表",
+        "tags": [
+          "管理端/资源/帖子"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "页码"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "每页数量"
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "draft",
+                "published",
+                "hidden"
+              ]
+            },
+            "description": "帖子状态"
+          }
+        ]
+      },
+      "post": {
+        "summary": "创建帖子",
+        "tags": [
+          "管理端/资源/帖子"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "title",
+                  "content"
+                ],
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "description": "帖子标题"
+                  },
+                  "content": {
+                    "type": "string",
+                    "description": "帖子资源"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "draft",
+                      "published"
+                    ],
+                    "default": "draft",
+                    "description": "帖子状态"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/posts/{id}": {
+      "get": {
+        "summary": "获取帖子详情",
+        "tags": [
+          "管理端/资源/帖子"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "帖子ID"
+          }
+        ]
+      },
+      "put": {
+        "summary": "更新帖子",
+        "tags": [
+          "管理端/资源/帖子"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "帖子ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "description": "帖子标题"
+                  },
+                  "content": {
+                    "type": "string",
+                    "description": "帖子资源"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "draft",
+                      "published",
+                      "hidden"
+                    ],
+                    "description": "帖子状态"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "删除帖子",
+        "tags": [
+          "管理端/资源/帖子"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "帖子ID"
+          }
+        ]
+      }
+    },
+    "/api/admin/posts/{id}/audit": {
+      "put": {
+        "summary": "审核帖子",
+        "tags": [
+          "管理端/资源/帖子"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "帖子ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "status"
+                ],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "approved",
+                      "rejected"
+                    ],
+                    "description": "审核状态"
+                  },
+                  "reject_reason": {
+                    "type": "string",
+                    "description": "拒绝原因(当状态为rejected时必填)"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/reports": {
+      "get": {
+        "summary": "获取举报列表",
+        "tags": [
+          "管理端/举报"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "页码"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            },
+            "description": "每页数量"
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "processing",
+                "resolved",
+                "rejected"
+              ]
+            },
+            "description": "举报状态（可选）"
+          },
+          {
+            "in": "query",
+            "name": "target_type",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "post",
+                "post-comment",
+                "user",
+                "music",
+                "novel",
+                "video",
+                "video-comment",
+                "novel-comment",
+                "music-comment"
+              ]
+            },
+            "description": "目标类型（可选）"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          }
+        }
+      }
+    },
+    "/api/admin/reports/{id}/process": {
+      "put": {
+        "summary": "处理举报",
+        "tags": [
+          "管理端/举报"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "举报ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "status"
+                ],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "processing",
+                      "resolved",
+                      "rejected"
+                    ],
+                    "description": "处理状态"
+                  },
+                  "result": {
+                    "type": "object",
+                    "description": "处理结果"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "处理成功"
+          }
+        }
+      }
+    },
+    "/api/admin/reports/{id}": {
+      "get": {
+        "summary": "获取举报详情",
+        "tags": [
+          "管理端/举报"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "举报ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          }
+        }
+      }
+    },
+    "/api/admin/statistics/overview": {
+      "get": {
+        "tags": [
+          "管理端/统计"
+        ],
+        "summary": "获取总览数据",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          }
+        }
+      }
+    },
+    "/api/admin/statistics/posts": {
+      "get": {
+        "tags": [
+          "管理端/统计"
+        ],
+        "summary": "获取文章统计数据",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "schema": {
+              "type": "integer",
+              "default": 7
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          }
+        }
+      }
+    },
+    "/api/admin/statistics/users": {
+      "get": {
+        "tags": [
+          "管理端/统计"
+        ],
+        "summary": "获取用户统计数据",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "schema": {
+              "type": "integer",
+              "default": 7
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          }
+        }
+      }
+    },
+    "/api/admin/statistics/comments": {
+      "get": {
+        "tags": [
+          "管理端/统计"
+        ],
+        "summary": "获取评论统计数据",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "schema": {
+              "type": "integer",
+              "default": 7
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          }
+        }
+      }
+    },
+    "/api/admin/tags": {
+      "get": {
+        "summary": "获取标签列表",
+        "tags": [
+          "管理端/标签"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "页码"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "每页数量"
+          },
+          {
+            "in": "query",
+            "name": "type",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "music",
+                "video",
+                "novel",
+                "post"
+              ]
+            },
+            "description": "标签类型"
+          },
+          {
+            "in": "query",
+            "name": "category",
+            "schema": {
+              "type": "string"
+            },
+            "description": "标签分类"
+          }
+        ]
+      },
+      "post": {
+        "summary": "创建标签",
+        "tags": [
+          "管理端/标签"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "type",
+                  "category"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "标签名称"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "music",
+                      "video",
+                      "novel",
+                      "post"
+                    ],
+                    "description": "标签类型"
+                  },
+                  "category": {
+                    "type": "string",
+                    "description": "标签分类"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "标签描述"
+                  },
+                  "order_num": {
+                    "type": "integer",
+                    "description": "排序号"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/tags/{id}": {
+      "put": {
+        "summary": "更新标签",
+        "tags": [
+          "管理端/标签"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "标签ID"
+          }
+        ]
+      },
+      "delete": {
+        "summary": "删除标签",
+        "tags": [
+          "管理端/标签"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "标签ID"
+          }
+        ]
+      }
+    },
+    "/api/admin/users": {
+      "get": {
+        "tags": [
+          "管理端/用户管理"
+        ],
+        "summary": "获取用户列表",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        }
+      }
+    },
+    "/api/admin/users/{id}": {
+      "get": {
+        "tags": [
+          "管理端/用户管理"
+        ],
+        "summary": "获取用户详情",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          },
+          "404": {
+            "description": "用户不存在"
+          }
+        }
+      }
+    },
+    "/api/admin/users/{id}/status": {
+      "put": {
+        "tags": [
+          "管理端/用户管理"
+        ],
+        "summary": "更新用户状态",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "active",
+                      "inactive",
+                      "banned"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新成功"
+          },
+          "404": {
+            "description": "用户不存在"
+          }
+        }
+      }
+    },
+    "/api/admin/videos": {
+      "get": {
+        "summary": "获取视频列表",
+        "tags": [
+          "管理端/资源/视频"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "页码"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "每页数量"
+          },
+          {
+            "in": "query",
+            "name": "title",
+            "schema": {
+              "type": "string"
+            },
+            "description": "视频标题关键词"
+          },
+          {
+            "in": "query",
+            "name": "category",
+            "schema": {
+              "type": "string"
+            },
+            "description": "视频分类"
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "draft",
+                "published",
+                "hidden"
+              ]
+            },
+            "description": "视频状态"
+          }
+        ]
+      },
+      "post": {
+        "summary": "创建视频",
+        "tags": [
+          "管理端/资源/视频"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "title",
+                  "url"
+                ],
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "description": "视频标题"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "视频简介"
+                  },
+                  "cover_image": {
+                    "type": "string",
+                    "description": "封面图URL"
+                  },
+                  "url": {
+                    "type": "string",
+                    "description": "视频URL"
+                  },
+                  "duration": {
+                    "type": "integer",
+                    "description": "视频时长(秒)"
+                  },
+                  "category": {
+                    "type": "string",
+                    "description": "视频分类"
+                  },
+                  "is_featured": {
+                    "type": "boolean",
+                    "description": "是否推荐"
+                  },
+                  "tags": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "标签列表"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/videos/{id}": {
+      "get": {
+        "summary": "获取视频详情",
+        "tags": [
+          "管理端/资源/视频"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "视频ID"
+          }
+        ]
+      },
+      "put": {
+        "summary": "更新视频信息",
+        "tags": [
+          "管理端/资源/视频"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "视频ID"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "description": "视频标题"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "视频简介"
+                  },
+                  "cover_image": {
+                    "type": "string",
+                    "description": "封面图URL"
+                  },
+                  "url": {
+                    "type": "string",
+                    "description": "视频URL"
+                  },
+                  "duration": {
+                    "type": "integer",
+                    "description": "视频时长(秒)"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "draft",
+                      "published",
+                      "hidden"
+                    ],
+                    "description": "视频状态"
+                  },
+                  "category": {
+                    "type": "string",
+                    "description": "视频分类"
+                  },
+                  "is_featured": {
+                    "type": "boolean",
+                    "description": "是否推荐"
+                  },
+                  "tags": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "标签列表"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "删除视频",
+        "tags": [
+          "管理端/资源/视频"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "视频ID"
+          }
+        ]
+      }
+    },
+    "/api/account/deletion": {
+      "post": {
+        "summary": "申请注销账号",
+        "description": "提交账号注销申请，系统会发送验证码到用户邮箱",
+        "tags": [
+          "客户端/账户"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "reason"
+                ],
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "description": "注销原因"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "申请提交成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "number",
+                      "example": 200
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                          "example": "注销申请已提交，请查收邮箱验证码"
+                        },
+                        "scheduledDate": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "deletionId": {
+                          "type": "number"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "请求参数错误或已有注销申请"
+          },
+          "401": {
+            "description": "未登录或token已过期"
+          }
+        }
+      }
+    },
+    "/api/account/deletion/confirm": {
+      "post": {
+        "summary": "确认注销账号",
+        "description": "使用邮箱验证码确认注销申请",
+        "tags": [
+          "客户端/账户"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "deletionId",
+                  "verificationCode"
+                ],
+                "properties": {
+                  "deletionId": {
+                    "type": "number",
+                    "description": "注销申请ID"
+                  },
+                  "verificationCode": {
+                    "type": "string",
+                    "description": "邮箱验证码"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "确认成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "number",
+                      "example": 200
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                          "example": "注销确认成功，账号将在预定日期注销"
+                        },
+                        "scheduledDate": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "验证码错误或已过期"
+          },
+          "404": {
+            "description": "注销申请不存在或已处理"
+          }
+        }
+      }
+    },
+    "/api/account/deletion/cancel": {
+      "post": {
+        "summary": "取消注销申请",
+        "description": "取消正在处理中的注销申请",
+        "tags": [
+          "客户端/账户"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "取消成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "number",
+                      "example": 200
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                          "example": "注销申请已取消"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "无正在处理的注销申请"
+          }
+        }
+      }
+    },
+    "/api/albums": {
+      "get": {
+        "summary": "获取专辑列表",
+        "tags": [
+          "客户端/资源/音乐/专辑"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "页码"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            },
+            "description": "每页数量"
+          },
+          {
+            "in": "query",
+            "name": "keyword",
+            "schema": {
+              "type": "string"
+            },
+            "description": "搜索关键词"
+          },
+          {
+            "in": "query",
+            "name": "artist_id",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "艺术家ID"
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "latest",
+                "hot"
+              ],
+              "default": "latest"
+            },
+            "description": "排序方式"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功获取专辑列表"
+          }
+        }
+      }
+    },
+    "/api/albums/{id}": {
+      "get": {
+        "summary": "获取专辑详情",
+        "tags": [
+          "客户端/资源/音乐/专辑"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "专辑ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功获取专辑详情"
+          }
+        }
+      }
+    },
+    "/api/albums/{id}/favorite": {
+      "post": {
+        "summary": "收藏/取消收藏专辑",
+        "tags": [
+          "客户端/资源/音乐/专辑"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "专辑ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "操作成功"
+          }
+        }
+      }
+    },
+    "/api/artists": {
+      "get": {
+        "summary": "获取艺术家列表",
+        "tags": [
+          "客户端/资源/音乐/艺术家"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "页码"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            },
+            "description": "每页数量"
+          },
+          {
+            "in": "query",
+            "name": "keyword",
+            "schema": {
+              "type": "string"
+            },
+            "description": "搜索关键词"
+          },
+          {
+            "in": "query",
+            "name": "tag_id",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "标签ID"
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "latest",
+                "hot"
+              ],
+              "default": "latest"
+            },
+            "description": "排序方式"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功获取艺术家列表"
+          }
+        }
+      }
+    },
+    "/api/artists/{id}": {
+      "get": {
+        "summary": "获取艺术家详情",
+        "tags": [
+          "客户端/资源/音乐/艺术家"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "艺术家ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功获取艺术家详情"
+          }
+        }
+      }
+    },
+    "/api/artists/{id}/musics": {
+      "get": {
+        "summary": "获取艺术家的音乐列表",
+        "tags": [
+          "客户端/资源/音乐/艺术家"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "艺术家ID"
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "页码"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            },
+            "description": "每页数量"
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "latest",
+                "hot"
+              ],
+              "default": "latest"
+            },
+            "description": "排序方式"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功获取音乐列表"
+          }
+        }
+      }
+    },
+    "/api/artists/{id}/favorite": {
+      "post": {
+        "summary": "收藏/取消收藏艺术家",
+        "tags": [
+          "客户端/资源/音乐/艺术家"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "艺术家ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "操作成功"
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "summary": "用户登录",
+        "tags": [
+          "客户端/账户"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "username",
+                  "password"
+                ],
+                "properties": {
+                  "username": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "登录成功"
+          }
+        }
+      }
+    },
+    "/api/auth/register": {
+      "post": {
+        "summary": "用户注册",
+        "tags": [
+          "客户端/账户"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "username",
+                  "password",
+                  "email"
+                ],
+                "properties": {
+                  "username": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "注册成功"
+          },
+          "400": {
+            "description": "请求参数错误"
+          },
+          "500": {
+            "description": "服务器错误"
+          }
+        }
+      }
+    },
+    "/api/auth/refresh-token": {
+      "post": {
+        "summary": "刷新 token",
+        "tags": [
+          "客户端/账户"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "刷新成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "token": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "summary": "用户登出",
+        "tags": [
+          "客户端/账户"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "登出成功"
+          }
+        }
+      }
+    },
+    "/api/auth/profile": {
+      "get": {
+        "summary": "获取用户信息",
+        "tags": [
+          "客户端/账户"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功获取用户信息"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        }
+      },
+      "put": {
+        "summary": "更新用户信息",
+        "tags": [
+          "客户端/账户"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nickname": {
+                    "type": "string"
+                  },
+                  "avatar": {
+                    "type": "string"
+                  },
+                  "signature": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新成功"
+          },
+          "401": {
+            "description": "未授权"
+          }
+        }
+      }
+    },
+    "/api/auth/change-password": {
+      "post": {
+        "summary": "修改密码",
+        "tags": [
+          "客户端/账户"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "newPassword"
+                ],
+                "properties": {
+                  "newPassword": {
+                    "type": "string",
+                    "description": "新密码",
+                    "minLength": 6
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "密码修改成功"
+          },
+          "400": {
+            "description": "请求参数错误"
+          },
+          "401": {
+            "description": "当前密码错误"
+          }
+        }
+      }
+    },
+    "/api/auth/forgot-password": {
+      "post": {
+        "summary": "请求重置密码",
+        "tags": [
+          "客户端/账户"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "重置密码邮件已发送"
+          },
+          "404": {
+            "description": "用户不存在"
+          }
+        }
+      }
+    },
+    "/api/auth/reset-password": {
+      "post": {
+        "summary": "重置密码",
+        "tags": [
+          "客户端/账户"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "code",
+                  "newPassword"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "code": {
+                    "type": "string"
+                  },
+                  "newPassword": {
+                    "type": "string",
+                    "minLength": 6
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "密码重置成功"
+          },
+          "400": {
+            "description": "验证码错误或已过期"
+          }
+        }
+      }
+    },
+    "/api/favorites": {
+      "get": {
+        "summary": "获取收藏列表",
+        "tags": [
+          "客户端/收藏列表"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "type",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "music",
+                "video",
+                "novel",
+                "post",
+                "artist",
+                "album",
+                "playlist"
+              ]
+            },
+            "description": "收藏类型"
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "页码"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            },
+            "description": "每页数量"
+          }
+        ]
+      }
+    },
+    "/api/music-comments": {
+      "get": {
+        "summary": "获取音乐评论列表",
+        "tags": [
+          "客户端/资源/音乐/评论"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "music_id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "音乐ID"
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "页码"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "每页数量"
+          }
+        ]
+      },
+      "post": {
+        "summary": "发表评论",
+        "tags": [
+          "客户端/资源/音乐/评论"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "music_id",
+                  "content"
+                ],
+                "properties": {
+                  "music_id": {
+                    "type": "integer",
+                    "description": "音乐ID"
+                  },
+                  "content": {
+                    "type": "string",
+                    "description": "评论内容"
+                  },
+                  "parent_id": {
+                    "type": "integer",
+                    "description": "父评论ID（回复时需要）"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/music-comments/{id}/replies": {
+      "get": {
+        "summary": "获取评论的回复列表",
+        "tags": [
+          "客户端/资源/音乐/评论"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "评论ID"
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "页码"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "每页数量"
+          }
+        ]
+      }
+    },
+    "/api/music-comments/{id}": {
+      "delete": {
+        "summary": "删除评论",
+        "tags": [
+          "客户端/资源/音乐/评论"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "评论ID"
+          }
+        ]
+      }
+    },
+    "/api/music-history": {
+      "get": {
+        "summary": "获取播放历史列表",
+        "tags": [
+          "客户端/资源/音乐/播放历史"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "页码"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            },
+            "description": "每页数量"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          }
+        }
+      },
+      "delete": {
+        "summary": "删除指定音乐的播放历史",
+        "tags": [
+          "客户端/资源/音乐/播放历史"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "musicIds"
+                ],
+                "properties": {
+                  "musicIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    },
+                    "description": "要删除的音乐ID列表"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "删除成功"
+          }
+        }
+      }
+    },
+    "/api/music": {
+      "get": {
+        "summary": "获取音乐列表",
+        "tags": [
+          "客户端/资源/音乐"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "页码"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            },
+            "description": "每页数量"
+          },
+          {
+            "in": "query",
+            "name": "keyword",
+            "schema": {
+              "type": "string"
+            },
+            "description": "搜索关键词"
+          },
+          {
+            "in": "query",
+            "name": "tag_id",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "标签ID（单个）"
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "latest",
+                "hot",
+                "rating"
+              ],
+              "default": "latest"
+            },
+            "description": "排序方式"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功获取音乐列表"
+          }
+        }
+      }
+    },
+    "/api/music/{id}": {
+      "get": {
+        "summary": "获取音乐详情",
+        "tags": [
+          "客户端/资源/音乐"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "音乐ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功获取音乐详情"
+          }
+        }
+      }
+    },
+    "/api/music/{id}/favorite": {
+      "post": {
+        "summary": "收藏/取消收藏音乐",
+        "tags": [
+          "客户端/资源/音乐"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "音乐ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "操作成功"
+          }
+        }
+      }
+    },
+    "/api/music/{id}/play": {
+      "post": {
+        "summary": "记录播放历史",
+        "tags": [
+          "客户端/资源/音乐"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "音乐ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "duration"
+                ],
+                "properties": {
+                  "duration": {
+                    "type": "integer",
+                    "description": "播放时长（秒）"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "记录成功"
+          }
+        }
+      }
+    },
+    "/api/notifications": {
+      "get": {
+        "summary": "获取通知列表",
+        "tags": [
+          "客户端/通知"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "页码"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            },
+            "description": "每页数量"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          }
+        }
+      },
+      "delete": {
+        "summary": "删除通知",
+        "tags": [
+          "客户端/通知"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "ids"
+                ],
+                "properties": {
+                  "ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    },
+                    "description": "通知ID列表"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "删除成功"
+          }
+        }
+      }
+    },
+    "/api/notifications/unread": {
+      "get": {
+        "summary": "获取未读通知数量",
+        "tags": [
+          "客户端/通知"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          }
+        }
+      }
+    },
+    "/api/notifications/read": {
+      "post": {
+        "summary": "标记通知为已读",
+        "tags": [
+          "客户端/通知"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "ids"
+                ],
+                "properties": {
+                  "ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    },
+                    "description": "通知ID列表"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "标记成功"
+          }
+        }
+      }
+    },
+    "/api/notifications/read-all": {
+      "post": {
+        "summary": "标记所有通知为已读",
+        "tags": [
+          "客户端/通知"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "标记成功"
+          }
+        }
+      }
+    },
+    "/api/playlists": {
+      "get": {
+        "summary": "获取用户歌单列表",
+        "tags": [
+          "客户端/资源/音乐/歌单"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "user_id",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "用户ID（不传则获取当前用户的歌单）"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功获取歌单列表"
+          }
+        }
+      },
+      "post": {
+        "summary": "创建歌单",
+        "tags": [
+          "客户端/资源/音乐/歌单"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "title"
+                ],
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "cover_image": {
+                    "type": "string"
+                  },
+                  "is_public": {
+                    "type": "boolean",
+                    "default": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "创建成功"
+          }
+        }
+      }
+    },
+    "/api/playlists/{id}": {
+      "put": {
+        "summary": "更新歌单信息",
+        "tags": [
+          "客户端/资源/音乐/歌单"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "歌单ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "cover_image": {
+                    "type": "string"
+                  },
+                  "is_public": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新成功"
+          }
+        }
+      },
+      "delete": {
+        "summary": "删除歌单",
+        "tags": [
+          "客户端/资源/音乐/歌单"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "歌单ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "删除成功"
+          }
+        }
+      }
+    },
+    "/api/playlists/{id}/tracks": {
+      "post": {
+        "summary": "向歌单批量添加音乐",
+        "tags": [
+          "客户端/资源/音乐/歌单"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "歌单ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "musicIds"
+                ],
+                "properties": {
+                  "musicIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    },
+                    "description": "音乐ID列表"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "添加成功"
+          }
+        }
+      }
+    },
+    "/api/playlists/{id}/tracks/{musicId}": {
+      "delete": {
+        "summary": "从歌单中移除音乐",
+        "tags": [
+          "客户端/资源/音乐/歌单"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "歌单ID"
+          },
+          {
+            "in": "path",
+            "name": "musicId",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "音乐ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "移除成功"
+          }
+        }
+      }
+    },
+    "/api/reports": {
+      "post": {
+        "summary": "提交举报",
+        "tags": [
+          "客户端/举报"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "target_type",
+                  "target_id",
+                  "reason"
+                ],
+                "properties": {
+                  "target_type": {
+                    "type": "string",
+                    "enum": [
+                      "post",
+                      "comment",
+                      "user",
+                      "music",
+                      "novel",
+                      "video"
+                    ],
+                    "description": "举报目标类型"
+                  },
+                  "target_id": {
+                    "type": "integer",
+                    "description": "举报目标ID"
+                  },
+                  "reason": {
+                    "type": "string",
+                    "enum": [
+                      "spam",
+                      "abuse",
+                      "porn",
+                      "copyright",
+                      "illegal",
+                      "other"
+                    ],
+                    "description": "举报原因"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "举报详细说明"
+                  },
+                  "evidence": {
+                    "type": "object",
+                    "description": "举报证据（可以包含图片URL等）"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "举报提交成功"
+          }
+        }
+      },
+      "get": {
+        "summary": "获取用户的举报历史",
+        "tags": [
+          "客户端/举报"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "页码"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            },
+            "description": "每页数量"
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "processing",
+                "resolved",
+                "rejected"
+              ]
+            },
+            "description": "举报状态（可选）"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          }
+        }
+      }
+    },
+    "/api/search/hot-keywords": {
+      "get": {
+        "summary": "获取热门搜索词",
+        "tags": [
+          "客户端/搜索"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "type",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "music",
+                "video",
+                "novel",
+                "post",
+                "artist",
+                "album"
+              ]
+            },
+            "description": "搜索类型"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "返回数量"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          }
+        }
+      }
+    },
+    "/api/search/history": {
+      "get": {
+        "summary": "获取用户搜索历史",
+        "tags": [
+          "客户端/搜索"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "type",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "music",
+                "video",
+                "novel",
+                "post",
+                "artist",
+                "album"
+              ]
+            },
+            "description": "搜索类型"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            },
+            "description": "返回数量"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功"
+          }
+        }
+      },
+      "delete": {
+        "summary": "清空用户搜索历史",
+        "tags": [
+          "客户端/搜索"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "type",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "music",
+                "video",
+                "novel",
+                "post",
+                "artist",
+                "album"
+              ]
+            },
+            "description": "搜索类型（可选，不传则清空所有类型）"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "清空成功"
+          }
+        }
+      }
+    },
+    "/api/files/confirm": {
+      "post": {
+        "summary": "测试文件确认（仅管理员）",
+        "tags": [
+          "基础能力/文件"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "description": "临时文件URL",
+                    "example": "http://localhost:9000/uploads/temp/image/1735618781190_temp_5utg82.png"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/upload/image": {
+      "post": {
+        "summary": "上传图片",
+        "tags": [
+          "基础能力/文件"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/upload/video": {
+      "post": {
+        "summary": "上传视频",
+        "tags": [
+          "基础能力/文件"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/upload/audio": {
+      "post": {
+        "summary": "上传音频",
+        "tags": [
+          "基础能力/文件"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/upload/novel": {
+      "post": {
+        "summary": "上传小说",
+        "tags": [
+          "基础能力/文件"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/upload/file": {
+      "post": {
+        "summary": "通用文件上传",
+        "tags": [
+          "基础能力/文件"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "tags": []
+}
