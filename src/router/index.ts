@@ -42,12 +42,32 @@ const routes: RouteRecordRaw[] = [
         }
       },
       {
-        path: 'grant-admin',
-        name: 'GrantAdmin',
-        component: () => import('@/views/system/grant-admin.vue'),
+        path: 'announcements',
+        name: 'Announcements',
+        component: () => import('@/views/system/announcements.vue'),
         meta: {
-          title: '授权管理员',
-          icon: 'user-add',
+          title: '公告管理',
+          icon: 'notification',
+          requiresAuth: true
+        }
+      },
+      {
+        path: 'users',
+        name: 'Users',
+        component: () => import('@/views/user/index.vue'),
+        meta: {
+          title: '用户管理',
+          icon: 'user',
+          requiresAuth: true
+        }
+      },
+      {
+        path: 'logs',
+        name: 'Logs',
+        component: () => import('@/views/system/logs.vue'),
+        meta: {
+          title: '系统日志',
+          icon: 'history',
           requiresAuth: true,
           roles: ['superadmin']
         }

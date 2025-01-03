@@ -1,5 +1,6 @@
 <template>
   <a-layout class="layout">
+    <notification-banner ref="notificationBannerRef" />
     <a-layout-sider v-model:collapsed="collapsed" :trigger="null" collapsible>
       <div class="logo">
         <span v-show="!collapsed">Fox Admin</span>
@@ -47,8 +48,11 @@
               <span>用户管理</span>
             </span>
           </template>
-          <a-menu-item key="user-list">
-            <router-link to="/users">用户列表</router-link>
+          <a-menu-item key="users">
+            <router-link to="/users">
+              <team-outlined />
+              <span>用户列表</span>
+            </router-link>
           </a-menu-item>
         </a-sub-menu>
 
@@ -59,16 +63,16 @@
               <span>系统管理</span>
             </span>
           </template>
-          <a-menu-item key="announcement">
-            <router-link to="/announcements">公告管理</router-link>
+          <a-menu-item key="announcements">
+            <router-link to="/announcements">
+              <notification-outlined />
+              <span>公告管理</span>
+            </router-link>
           </a-menu-item>
-          <a-menu-item key="config">
-            <router-link to="/configs">系统配置</router-link>
-          </a-menu-item>
-          <a-menu-item key="grant-admin" v-if="userStore.role === 'superadmin'">
-            <router-link to="/grant-admin">
-              <user-add-outlined />
-              <span>授权管理员</span>
+          <a-menu-item key="logs" v-if="userStore.role === 'superadmin'">
+            <router-link to="/logs">
+              <history-outlined />
+              <span>系统日志</span>
             </router-link>
           </a-menu-item>
         </a-sub-menu>
@@ -115,7 +119,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/store/user'
 import {
@@ -128,8 +132,13 @@ import {
   DashboardOutlined,
   CustomerServiceOutlined,
   MusicOutlined,
-  UserAddOutlined
+  UserAddOutlined,
+  NotificationOutlined,
+  TeamOutlined,
+  HistoryOutlined
 } from '@ant-design/icons-vue'
+import NotificationBanner from '@/components/NotificationBanner.vue'
+import { wsService } from '@/utils/websocket'
 
 const collapsed = ref<boolean>(false)
 const selectedKeys = ref<string[]>(['dashboard'])
@@ -138,6 +147,8 @@ const openKeys = ref<string[]>(['resource'])
 const router = useRouter()
 const userStore = useUserStore()
 const route = useRoute()
+
+const notificationBannerRef = ref()
 
 const handleLogout = async () => {
   await userStore.logout()
@@ -154,6 +165,12 @@ watch(
   },
   { immediate: true }
 )
+
+onMounted(() => {
+  if (notificationBannerRef.value) {
+    wsService.setNotificationBanner(notificationBannerRef.value)
+  }
+})
 </script>
 
 <style scoped>

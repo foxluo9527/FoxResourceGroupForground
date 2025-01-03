@@ -7,6 +7,7 @@
         <h1>Fox Admin</h1>
       </div>
       <a-form
+        ref="formRef"
         :model="loginForm"
         @finish="handleSubmit"
         class="login-form"
@@ -70,6 +71,8 @@ import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { UserOutlined, LockOutlined } from '@ant-design/icons-vue'
 import { useUserStore } from '@/store/user'
+import { message, Form } from 'ant-design-vue'
+import type { FormInstance } from 'ant-design-vue'
 
 interface LoginForm {
   username: string
@@ -78,6 +81,7 @@ interface LoginForm {
 
 const router = useRouter()
 const userStore = useUserStore()
+const formRef = ref<FormInstance>()
 
 const loginForm = reactive<LoginForm>({
   username: '',
@@ -95,18 +99,21 @@ if (savedUsername) {
 }
 
 const handleSubmit = async () => {
-  loading.value = true
   try {
-    const success = await userStore.login(loginForm.username, loginForm.password)
-    if (success) {
-      // 如果选择记住我,保存用户名
-      if (rememberMe.value) {
-        localStorage.setItem('remembered_username', loginForm.username)
+    const values = await formRef.value?.validateFields()
+    if (values) {
+      loading.value = true
+      const result = await userStore.login(values.username, values.password)
+      if (result.success) {
+        router.push('/')
       } else {
-        localStorage.removeItem('remembered_username')
+        // 只显示一个错误提示
+        message.error(result.message)
       }
-      router.push('/')
     }
+  } catch (error) {
+    // 表单验证失败，不显示提示
+    console.log('表单验证失败:', error)
   } finally {
     loading.value = false
   }

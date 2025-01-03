@@ -1,20 +1,30 @@
 import axios from 'axios'
 import type { AxiosInstance, AxiosResponse } from 'axios'
 import { message } from 'ant-design-vue'
+import { getToken } from '@/utils/auth'
 import { useUserStore } from '@/store/user'
 import router from '@/router'
 
+interface Response<T = any> {
+  code: number
+  message: string
+  data: T
+  success: boolean
+}
+
 const service: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
-  timeout: 15000
+  timeout: 5000
 })
 
 // 请求拦截器
 service.interceptors.request.use(
   (config) => {
-    const userStore = useUserStore()
-    if (userStore.token) {
-      config.headers['Authorization'] = userStore.token
+    const token = getToken()
+    if (token && config.headers) {
+      // 检查 token 是否已经包含 Bearer 前缀
+      const finalToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`
+      config.headers.Authorization = finalToken
     }
     return config
   },
@@ -25,31 +35,26 @@ service.interceptors.request.use(
 
 // 响应拦截器
 service.interceptors.response.use(
-  (response: AxiosResponse) => {
-    const res = response.data
-    
-    if (!res.success) {
-      message.error(res.message || '请求失败')
-      
-      if (res.code === 401 || res.message.includes('认证')) {
-        const userStore = useUserStore()
-        userStore.clearUserInfo()
-        router.push('/login')
-      }
-      return Promise.reject(new Error(res.message || '请求失败'))
-    }
-    return res
+  (response: AxiosResponse<Response>) => {
+    return response.data
   },
   (error) => {
-    if (error.response?.status === 401) {
+    // 处理 401 响应状态码，但避免在 logout 接口调用时处理
+    if (error.response?.status === 401 && !error.config.url.includes('/logout')) {
       const userStore = useUserStore()
-      userStore.clearUserInfo()
-      router.push('/login')
-      message.error('认证失败，请重新登录')
-    } else {
-      message.error(error.message || '请求失败')
+      userStore.logout()  // 清除用户信息
+      router.push('/login')  // 跳转到登录页
     }
-    return Promise.reject(error)
+
+    if (error.response?.data) {
+      return Promise.reject(error.response.data)
+    }
+    return Promise.reject({
+      code: 500,
+      message: '网络错误，请稍后重试',
+      data: null,
+      success: false
+    })
   }
 )
 
