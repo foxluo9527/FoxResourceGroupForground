@@ -1,84 +1,120 @@
 import { defineStore } from 'pinia'
 import { login, logout } from '@/api/auth'
-import { message } from 'ant-design-vue'
+import { removeToken, setToken, getToken } from '@/utils/auth'
+import { wsService } from '@/utils/websocket'
 
-interface UserState {
-  token: string | null
-  username: string | null
-  role: string | null
-  email: string | null
-  id: number | null
+interface UserInfo {
+  token: string
+  username: string
+  role: string
+  roleLabel: string
 }
 
 export const useUserStore = defineStore('user', {
-  state: (): UserState => ({
-    token: localStorage.getItem('token'),
-    username: localStorage.getItem('username'),
-    role: localStorage.getItem('role'),
-    email: localStorage.getItem('email'),
-    id: Number(localStorage.getItem('id')) || null
+  state: () => ({
+    token: '',
+    username: '',
+    role: '',
+    roleLabel: ''
   }),
-  
-  getters: {
-    roleLabel(): string {
-      switch (this.role) {
-        case 'admin':
-          return '管理员'
-        case 'superadmin':
-          return '超级管理员'
-        default:
-          return this.role || ''
-      }
-    }
-  },
-  
+
   actions: {
+    // 初始化用户状态
+    initUserState() {
+      const token = getToken()
+      if (token) {
+        const userInfo = localStorage.getItem('user_info')
+        if (userInfo) {
+          const { username, role, roleLabel } = JSON.parse(userInfo)
+          this.token = token
+          this.username = username
+          this.role = role
+          this.roleLabel = roleLabel
+          // 只在没有连接时才连接 WebSocket
+          if (!wsService.isConnected()) {
+            wsService.connect(token)
+          }
+        }
+      }
+    },
+
+    // 保存用户信息到本地存储
+    saveUserInfo() {
+      const userInfo: UserInfo = {
+        token: this.token,
+        username: this.username,
+        role: this.role,
+        roleLabel: this.roleLabel
+      }
+      localStorage.setItem('user_info', JSON.stringify(userInfo))
+    },
+
     async login(username: string, password: string) {
       try {
         const res = await login({ username, password })
-        if (res.success) {
-          this.token = res.data.token
-          this.username = res.data.user.username
-          this.role = res.data.user.role
-          this.email = res.data.user.email
-          this.id = res.data.user.id
 
-          localStorage.setItem('token', res.data.token)
-          localStorage.setItem('username', res.data.user.username)
-          localStorage.setItem('role', res.data.user.role)
-          localStorage.setItem('email', res.data.user.email)
-          localStorage.setItem('id', String(res.data.user.id))
+        if (res.success && res.data) {
+          const { token, user } = res.data
+          
+          if (!token || !user) {
+            return { 
+              success: false, 
+              message: '登录响应数据不完整' 
+            }
+          }
 
-          message.success(res.message || '登录成功')
-          return true
+          this.token = token
+          this.username = user.username
+          this.role = (user.role || '').toLowerCase()
+          this.roleLabel = this.getRoleLabel(user.role)
+          setToken(token)
+          this.saveUserInfo()
+          wsService.connect(token)
+          
+          return { success: true }
         }
-        return false
-      } catch (error) {
-        message.error('登录失败')
-        return false
+        return { success: false, message: res.message }
+      } catch (error: any) {
+        console.error('Login error:', error)
+        return { 
+          success: false, 
+          message: error.message
+        }
       }
     },
-    
+
+    getRoleLabel(role: string): string {
+      if (!role) return '未知角色'
+      
+      const roleMap: Record<string, string> = {
+        superadmin: '超级管理员',
+        admin: '管理员',
+        user: '普通用户'
+      }
+      return roleMap[role.toLowerCase()] || '未知角色'
+    },
+
     async logout() {
       try {
         await logout()
-        this.clearUserInfo()
-      } catch (error) {
-        message.error('退出失败')
+      } finally {
+        this.token = ''
+        this.username = ''
+        this.role = ''
+        this.roleLabel = ''
+        removeToken()
+        localStorage.removeItem('user_info')  // 清除用户信息
+        wsService.disconnect()  // 断开 WebSocket 连接
       }
-    },
+    }
+  },
 
-    clearUserInfo() {
-      this.token = null
-      this.username = null
-      this.role = null
-      this.email = null
-      this.id = null
-      localStorage.removeItem('token')
-      localStorage.removeItem('username')
-      localStorage.removeItem('role')
-      localStorage.removeItem('email')
-      localStorage.removeItem('id')
+  getters: {
+    isSuperAdmin(): boolean {
+      return (this.role || '').toLowerCase() === 'superadmin'
+    },
+    isAdmin(): boolean {
+      return (this.role || '').toLowerCase() === 'admin'
     }
   }
 }) 
