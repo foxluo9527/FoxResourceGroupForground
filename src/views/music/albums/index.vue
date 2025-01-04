@@ -96,10 +96,7 @@
       @close="handleDrawerClose"
     >
       <template #extra>
-        <a-space>
-          <a-button @click="handleDrawerClose">关闭</a-button>
-          <a-button type="primary" @click.stop="handleEdit(currentAlbum)">编辑</a-button>
-        </a-space>
+
       </template>
 
       <a-descriptions :column="1" bordered>

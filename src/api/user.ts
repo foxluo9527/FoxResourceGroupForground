@@ -3,9 +3,14 @@ import request from '@/utils/request'
 export interface User {
   id: number
   username: string
+  nickname: string | null
   email: string
+  phone: string | null
+  avatar: string | null
   role: string
   status: string
+  signature: string | null
+  last_login: string | null
   created_at: string
   updated_at: string
   is_online: boolean
@@ -23,9 +28,9 @@ interface GetUsersParams {
 interface UserListResult {
   users: User[]
   total: number
-  page: number
-  limit: number
-  pages: number
+  current: number
+  pageSize: number
+  totalPages: number
 }
 
 interface UserDetail extends User {

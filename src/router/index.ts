@@ -98,7 +98,7 @@ const routes: RouteRecordRaw[] = [
             name: 'PostsComments',
             component: () => import('@/views/posts/comments/index.vue'),
             meta: {
-              title: '帖子评论',
+              title: '评论管理',
               requiresAuth: true
             }
           }

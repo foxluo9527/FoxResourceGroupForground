@@ -75,12 +75,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted, watch, nextTick } from 'vue'
 import { PlusOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 import type { TablePaginationConfig } from 'ant-design-vue'
 import { http } from '@/utils/http'
 import type { Tag } from '@/types/tag'
+import { useRoute, useRouter } from 'vue-router'
 
 const columns = [
   {
@@ -134,6 +135,46 @@ const formState = reactive({
   type: '',
   category: 'genre',
   description: ''
+})
+
+const route = useRoute()
+const router = useRouter()
+const queryParams = ref({
+  type: '',
+  keyword: ''
+})
+
+// 监听路由参数变化
+watch(
+  () => route.query,
+  (query) => {
+    if (query.type) {
+      const type = query.type as string
+      // 确保类型有效
+      const validTypes = ['music', 'video', 'novel', 'post']
+      if (validTypes.includes(type)) {
+        currentType.value = type
+        // 延迟执行 fetchTags，确保组件完全挂载
+        nextTick(() => {
+          fetchTags()
+        })
+      }
+    }
+  },
+  { immediate: true }
+)
+
+// 监听类型变化
+watch(currentType, (newType) => {
+  // 更新路由参数但不触发路由变化
+  router.replace({
+    path: route.path,
+    query: { 
+      ...route.query,
+      type: newType
+    }
+  })
+  fetchTags()
 })
 
 const fetchTags = async () => {

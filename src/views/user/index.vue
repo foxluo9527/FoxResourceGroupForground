@@ -84,6 +84,26 @@
       :row-class-name="() => 'clickable-row'"
     >
       <template #bodyCell="{ column, record }">
+        <template v-if="column.key === 'username'">
+          <a-space class="user-info">
+            <a-avatar 
+              :size="32" 
+              :src="record.avatar"
+              :style="{ 
+                backgroundColor: record.avatar ? undefined : '#1890ff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }"
+            >
+              {{ getAvatarText(record) }}
+            </a-avatar>
+            <div class="user-info-text">
+              <div class="username">{{ record.username }}</div>
+              <div class="nickname" v-if="record.nickname">{{ record.nickname }}</div>
+            </div>
+          </a-space>
+        </template>
         <template v-if="column.key === 'role'">
           <a-tag :color="getRoleColor(record.role)">
             {{ roleMap[record.role] }}
@@ -113,49 +133,29 @@
     <!-- 用户详情抽屉 -->
     <a-drawer
       v-model:visible="drawerVisible"
-      title="用户详情"
+      :title="currentUser?.nickname || currentUser?.username"
       placement="right"
       width="600"
     >
       <template #extra>
-        <a-dropdown>
-          <a-button type="primary">
-            修改状态
-            <down-outlined />
-          </a-button>
-          <template #overlay>
-            <a-menu>
-              <a-menu-item 
-                key="active" 
-                :disabled="currentUser?.status === 'active'"
-                @click="showStatusConfirm('active')"
-              >
-                <check-circle-outlined style="color: #52c41a" />
-                <span>设为正常</span>
-              </a-menu-item>
-              <a-menu-item 
-                key="inactive" 
-                :disabled="currentUser?.status === 'inactive'"
-                @click="showStatusConfirm('inactive')"
-              >
-                <pause-circle-outlined style="color: #faad14" />
-                <span>设为禁用</span>
-              </a-menu-item>
-              <a-menu-item 
-                key="banned" 
-                :disabled="currentUser?.status === 'banned'"
-                @click="showStatusConfirm('banned')"
-              >
-                <stop-outlined style="color: #ff4d4f" />
-                <span>设为封禁</span>
-              </a-menu-item>
-            </a-menu>
-          </template>
-        </a-dropdown>
+        <a-button @click="showUserPosts">
+          <read-outlined />
+          查看帖子
+        </a-button>
       </template>
 
       <a-descriptions v-if="currentUser" bordered :column="1">
+        <a-descriptions-item label="头像">
+          <a-avatar 
+            :size="64" 
+            :src="currentUser.avatar"
+            shape="square"
+          >
+            {{ currentUser.nickname?.[0] || currentUser.username?.[0] }}
+          </a-avatar>
+        </a-descriptions-item>
         <a-descriptions-item label="用户名">{{ currentUser.username }}</a-descriptions-item>
+        <a-descriptions-item label="昵称">{{ currentUser.nickname || '-' }}</a-descriptions-item>
         <a-descriptions-item label="邮箱">{{ currentUser.email }}</a-descriptions-item>
         <a-descriptions-item label="角色">
           <a-tag :color="getRoleColor(currentUser.role)">
@@ -219,6 +219,89 @@
           </a-collapse-panel>
         </a-collapse>
       </template>
+
+      <!-- 用户帖子子抽屉 -->
+      <a-drawer
+        v-model:visible="postsDrawerVisible"
+        :title="`${currentUser?.nickname || currentUser?.username} 的帖子`"
+        placement="right"
+        :width="800"
+      >
+        <a-table
+          :columns="postColumns"
+          :data-source="userPosts"
+          :loading="postsLoading"
+          :pagination="postsPagination"
+          row-key="id"
+          @change="handlePostsTableChange"
+          :customRow="customPostRow"
+        >
+          <template #tags="{ record }">
+            <a-space wrap>
+              <a-tag 
+                v-for="tag in record.tags" 
+                :key="tag"
+                class="clickable-tag"
+                @click.stop="handleTagClick"
+              >
+                {{ tag }}
+              </a-tag>
+            </a-space>
+          </template>
+        </a-table>
+
+        <!-- 添加帖子详情抽屉 -->
+        <a-drawer
+          v-model:visible="postDetailDrawerVisible"
+          :title="postDetail?.title"
+          placement="right"
+          width="600"
+        >
+          <a-descriptions v-if="postDetail" bordered :column="1">
+            <a-descriptions-item label="作者">
+              <a-space>
+                <a-avatar :src="postDetail.author_avatar" />
+                <span>{{ postDetail.author_name }}</span>
+              </a-space>
+            </a-descriptions-item>
+            <a-descriptions-item label="内容">{{ postDetail.content }}</a-descriptions-item>
+            <a-descriptions-item label="标签">
+              <a-space wrap>
+                <a-tag 
+                  v-for="tag in postDetail.tags" 
+                  :key="tag"
+                  class="clickable-tag"
+                  @click.stop="handleTagClick"
+                >
+                  {{ tag }}
+                </a-tag>
+              </a-space>
+            </a-descriptions-item>
+            <a-descriptions-item label="浏览数">{{ postDetail.view_count }}</a-descriptions-item>
+            <a-descriptions-item label="点赞数">{{ postDetail.like_count }}</a-descriptions-item>
+            <a-descriptions-item label="评论数">{{ postDetail.comment_count }}</a-descriptions-item>
+            <a-descriptions-item label="创建时间">
+              {{ new Date(postDetail.created_at).toLocaleString() }}
+            </a-descriptions-item>
+            <a-descriptions-item label="更新时间">
+              {{ new Date(postDetail.updated_at).toLocaleString() }}
+            </a-descriptions-item>
+            <a-descriptions-item label="图片" v-if="postDetail.images?.length">
+              <a-image-preview-group>
+                <a-space wrap size="middle">
+                  <a-image
+                    v-for="image in postDetail.images"
+                    :key="image.id"
+                    :src="image.url"
+                    :width="120"
+                    style="object-fit: cover; border-radius: 4px;"
+                  />
+                </a-space>
+              </a-image-preview-group>
+            </a-descriptions-item>
+          </a-descriptions>
+        </a-drawer>
+      </a-drawer>
     </a-drawer>
 
     <!-- 状态修改确认对话框 -->
@@ -258,7 +341,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
-import { message, Modal, Form } from 'ant-design-vue'
+import { message, Modal, Form, Avatar } from 'ant-design-vue'
 import {
   getUsers,
   getUserDetail,
@@ -273,13 +356,15 @@ import {
   StopOutlined,
   DesktopOutlined,
   GlobalOutlined,
-  UserAddOutlined
+  UserAddOutlined,
+  ReadOutlined
 } from '@ant-design/icons-vue'
 import dayjs from 'dayjs'
 import { useUserStore } from '@/store/user'
 import type { FormInstance } from 'ant-design-vue'
-import { grantAdmin } from '@/api/auth'  // 需要从 auth.ts 导入
+import { grantAdmin } from '@/api/auth'
 import { useRoute, useRouter } from 'vue-router'
+import { getPosts, getPostDetail } from '@/api/posts'
 
 // 角色映射
 const roleMap = {
@@ -303,7 +388,8 @@ const columns = [
     title: '用户名',
     dataIndex: 'username',
     key: 'username',
-    width: '15%'
+    width: '15%',
+    slots: { customRender: 'username' }
   },
   {
     title: '邮箱',
@@ -625,9 +711,42 @@ const handleGrantAdmin = () => {
   })
 }
 
+// 帖子相关状态
+const postsDrawerVisible = ref(false)
+const userPosts = ref([])
+const postsLoading = ref(false)
+const postsPagination = ref({
+  current: 1,
+  pageSize: 10,
+  total: 0,
+  showSizeChanger: true,
+  showTotal: (total: number) => `共 ${total} 条`
+})
+
+// 添加帖子详情相关状态
+const postDetailDrawerVisible = ref(false)
+const postDetail = ref<PostDetail | null>(null)
+
+// 添加帖子行点击处理
+const customPostRow = (record: any) => {
+  return {
+    onClick: async () => {
+      try {
+        const response = await getPostDetail(record.id)
+        if (response.success) {
+          postDetail.value = response.data
+          postDetailDrawerVisible.value = true
+        }
+      } catch (error) {
+        message.error('获取帖子详情失败')
+      }
+    }
+  }
+}
+
 // 修改抽屉关闭处理
-watch(drawerVisible, (newVal) => {
-  if (!newVal) {
+watch([drawerVisible, postsDrawerVisible], ([drawer, posts]) => {
+  if (!drawer) {
     // 清理状态
     currentUser.value = null
     
@@ -642,6 +761,10 @@ watch(drawerVisible, (newVal) => {
       })
     }
   }
+  if (!posts) {
+    userPosts.value = []
+    postsPagination.value.current = 1
+  }
 })
 
 // 添加行点击处理
@@ -651,6 +774,105 @@ const customRow = (record: User) => {
       showUserDetail(record.id)
     }
   }
+}
+
+// 获取头像文字
+const getAvatarText = (user: User) => {
+  return (user.nickname?.[0] || user.username?.[0])?.toUpperCase() || '?'
+}
+
+// 帖子列表列定义
+const postColumns = [
+  {
+    title: '标题',
+    dataIndex: 'title',
+    key: 'title'
+  },
+  {
+    title: '标签',
+    dataIndex: 'tags',
+    key: 'tags',
+    slots: { customRender: 'tags' }
+  },
+  {
+    title: '浏览数',
+    dataIndex: 'view_count',
+    key: 'view_count'
+  },
+  {
+    title: '点赞数',
+    dataIndex: 'like_count',
+    key: 'like_count'
+  },
+  {
+    title: '评论数',
+    dataIndex: 'comment_count',
+    key: 'comment_count'
+  },
+  {
+    title: '创建时间',
+    dataIndex: 'created_at',
+    key: 'created_at',
+    customRender: ({ text }: { text: string }) => new Date(text).toLocaleString()
+  }
+]
+
+// 获取用户帖子
+const fetchUserPosts = async () => {
+  if (!currentUser.value) return
+  
+  postsLoading.value = true
+  try {
+    const response = await getPosts({
+      page: postsPagination.value.current,
+      limit: postsPagination.value.pageSize,
+      author_id: currentUser.value.id
+    })
+    if (response.success) {
+      userPosts.value = response.data.list
+      postsPagination.value.total = response.data.pagination.total
+    }
+  } catch (error) {
+    message.error('获取用户帖子失败')
+  } finally {
+    postsLoading.value = false
+  }
+}
+
+// 处理帖子表格分页变化
+const handlePostsTableChange = (paginationConfig: any) => {
+  postsPagination.value.current = paginationConfig.current
+  postsPagination.value.pageSize = paginationConfig.pageSize
+  fetchUserPosts()
+}
+
+// 显示用户帖子
+const showUserPosts = () => {
+  postsDrawerVisible.value = true
+  fetchUserPosts()
+}
+
+// 监听帖子抽屉关闭
+watch(postsDrawerVisible, (newVal) => {
+  if (!newVal) {
+    userPosts.value = []
+    postsPagination.value.current = 1
+  }
+})
+
+// 处理标签点击
+const handleTagClick = () => {
+  router.push({
+    name: 'Tags',  // 使用命名路由
+    query: { 
+      type: 'post'
+    },
+    replace: false  // 确保不使用 replace
+  }).then(() => {
+    // 关闭抽屉
+    postsDrawerVisible.value = false
+    drawerVisible.value = false
+  })
 }
 
 onMounted(() => {
@@ -721,5 +943,53 @@ onMounted(() => {
 
 .clickable-row:hover {
   background-color: #f5f5f5;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.user-info-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.username {
+  font-weight: 500;
+  color: rgba(0, 0, 0, 0.85);
+}
+
+.nickname {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+:deep(.ant-avatar) {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background-color: #1890ff;
+  color: #fff;
+  font-weight: 500;
+}
+
+:deep(.ant-drawer-header) {
+  padding: 16px 24px;
+}
+
+:deep(.ant-drawer .ant-drawer) {
+  position: absolute;
+}
+
+.clickable-tag {
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.clickable-tag:hover {
+  opacity: 0.8;
 }
 </style> 
