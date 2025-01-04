@@ -80,6 +80,8 @@
         showTotal: (total) => `共 ${total} 条`
       }"
       :loading="loading"
+      :customRow="customRow"
+      :row-class-name="() => 'clickable-row'"
     >
       <template #bodyCell="{ column, record }">
         <template v-if="column.key === 'role'">
@@ -255,7 +257,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { message, Modal, Form } from 'ant-design-vue'
 import {
   getUsers,
@@ -277,6 +279,7 @@ import dayjs from 'dayjs'
 import { useUserStore } from '@/store/user'
 import type { FormInstance } from 'ant-design-vue'
 import { grantAdmin } from '@/api/auth'  // 需要从 auth.ts 导入
+import { useRoute, useRouter } from 'vue-router'
 
 // 角色映射
 const roleMap = {
@@ -330,22 +333,19 @@ const columns = [
     title: '连接设备',
     dataIndex: 'connection_count',
     key: 'connection_count',
-    width: '8%'
+    width: '13%'
   },
   {
     title: '创建时间',
     dataIndex: 'created_at',
     key: 'created_at',
-    width: '15%',
+    width: '20%',
     customRender: ({ text }: { text: string }) => dayjs(text).format('YYYY-MM-DD HH:mm:ss')
-  },
-  {
-    title: '操作',
-    key: 'action',
-    width: '10%',
-    fixed: 'right'
   }
 ]
+
+const route = useRoute()
+const router = useRouter()
 
 const userStore = useUserStore()
 
@@ -472,17 +472,57 @@ const handleSearch = () => {
   fetchUsers()
 }
 
-// 显示用户详情
-const showUserDetail = async (id: number) => {
-  try {
-    const res = await getUserDetail(id)
-    if (res.success) {
-      currentUser.value = res.data
-      drawerVisible.value = true
-    }
-  } catch (error) {
-    message.error('获取用户详情失败')
+// 修改路由参数监听，使用防抖
+const debouncedShowUserDetail = (id: number) => {
+  // 如果已经打开了相同用户的详情，直接返回
+  if (currentUser.value?.id === id && drawerVisible.value) {
+    return
   }
+
+  // 如果正在获取用户详情，直接返回
+  if (loading.value) {
+    return
+  }
+
+  loading.value = true
+  getUserDetail(id)
+    .then(res => {
+      if (res.success) {
+        currentUser.value = res.data
+        drawerVisible.value = true
+      }
+    })
+    .catch(() => {
+      message.error('获取用户详情失败')
+    })
+    .finally(() => {
+      loading.value = false
+    })
+}
+
+// 修改路由参数监听
+watch(
+  () => route.query.userId,
+  (newUserId) => {
+    if (newUserId) {
+      debouncedShowUserDetail(Number(newUserId))
+    } else {
+      drawerVisible.value = false
+    }
+  },
+  { immediate: true }
+)
+
+// 修改显示用户详情函数
+const showUserDetail = (id: number) => {
+  // 通过修改路由参数来触发详情显示
+  router.push({
+    path: route.path,
+    query: {
+      ...route.query,
+      userId: String(id)
+    }
+  })
 }
 
 // 处理筛选条件变化
@@ -585,6 +625,34 @@ const handleGrantAdmin = () => {
   })
 }
 
+// 修改抽屉关闭处理
+watch(drawerVisible, (newVal) => {
+  if (!newVal) {
+    // 清理状态
+    currentUser.value = null
+    
+    // 清除路由参数
+    if (route.query.userId) {
+      router.replace({
+        path: route.path,
+        query: {
+          ...route.query,
+          userId: undefined
+        }
+      })
+    }
+  }
+})
+
+// 添加行点击处理
+const customRow = (record: User) => {
+  return {
+    onClick: () => {
+      showUserDetail(record.id)
+    }
+  }
+}
+
 onMounted(() => {
   fetchUsers()
 })
@@ -644,5 +712,14 @@ onMounted(() => {
 .filter-wrapper,
 .filter-tags {
   display: none;
+}
+
+.clickable-row {
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.clickable-row:hover {
+  background-color: #f5f5f5;
 }
 </style> 

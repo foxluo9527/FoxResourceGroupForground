@@ -1,71 +1,34 @@
 <template>
-  <div class="logs">
-    <div class="operation-bar">
-      <a-space>
-        <!-- 操作类型筛选 -->
-        <a-select
-          v-model:value="queryParams.action"
-          placeholder="操作类型"
-          style="width: 120px"
-          allowClear
-          @change="handleFilter"
-        >
-          <a-select-option value="create">创建</a-select-option>
-          <a-select-option value="update">更新</a-select-option>
-          <a-select-option value="delete">删除</a-select-option>
-          <a-select-option value="batch_operation">批量操作</a-select-option>
-        </a-select>
-
-        <!-- 操作对象筛选 -->
-        <a-select
-          v-model:value="queryParams.target"
-          placeholder="操作对象"
-          style="width: 120px"
-          allowClear
-          @change="handleFilter"
-        >
-          <a-select-option value="music_comments">音乐评论</a-select-option>
-          <a-select-option value="users">用户</a-select-option>
-          <a-select-option value="announcements">公告</a-select-option>
-        </a-select>
-
-        <!-- 日期范围选择 -->
-        <a-range-picker
-          v-model:value="dateRange"
-          @change="handleDateRangeChange"
-          :placeholder="['开始日期', '结束日期']"
-        />
-      </a-space>
-    </div>
-
-    <a-table
-      :columns="columns"
-      :data-source="logs"
-      row-key="id"
-      :pagination="{
-        total: total,
-        current: queryParams.page,
-        pageSize: queryParams.limit,
-        onChange: handlePageChange,
-        showSizeChanger: true,
-        showTotal: (total) => `共 ${total} 条`
-      }"
-      :loading="loading"
-    >
-      <template #bodyCell="{ column, record }">
-        <template v-if="column.key === 'action'">
-          <a-tag :color="getActionColor(record.action)">
-            {{ actionMap[record.action] }}
-          </a-tag>
+  <div class="logs-page">
+    <a-card>
+      <a-table
+        :columns="columns"
+        :data-source="logs"
+        :loading="loading"
+        :scroll="{ x: 1200 }"
+        :pagination="{
+          ...pagination,
+          showSizeChanger: true,
+          showTotal: (total) => `共 ${total} 条`,
+          pageSizeOptions: ['10', '20', '50', '100']
+        }"
+        @change="handleTableChange"
+      >
+        <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'action'">
+            <a-tag :color="getActionColor(record.action)">
+              {{ actionMap[record.action] }}
+            </a-tag>
+          </template>
+          <template v-if="column.key === 'target'">
+            {{ targetMap[record.target] || record.target }}
+          </template>
+          <template v-if="column.key === 'details'">
+            <a-button type="link" @click="showDetails(record)">查看详情</a-button>
+          </template>
         </template>
-        <template v-if="column.key === 'target'">
-          {{ targetMap[record.target] || record.target }}
-        </template>
-        <template v-if="column.key === 'details'">
-          <a-button type="link" @click="showDetails(record)">查看详情</a-button>
-        </template>
-      </template>
-    </a-table>
+      </a-table>
+    </a-card>
 
     <!-- 详情抽屉 -->
     <a-drawer
@@ -259,26 +222,20 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.logs {
+.logs-page {
   padding: 24px;
+  min-width: 850px;
 }
 
-.operation-bar {
-  margin-bottom: 16px;
+:deep(.ant-table-pagination) {
+  width: 100%;
+  margin: 16px 0 !important;
+  justify-content: flex-end;
+  flex-wrap: wrap;
 }
 
-.ant-space {
-  display: flex;
-  justify-content: flex-start;
-  gap: 16px !important;
-}
-
-pre {
-  background-color: #f5f5f5;
-  padding: 8px;
-  border-radius: 4px;
-  margin: 0;
-  white-space: pre-wrap;
-  word-wrap: break-word;
+:deep(.ant-pagination-total-text) {
+  flex-shrink: 0;
+  margin-right: auto;
 }
 </style> 

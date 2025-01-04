@@ -1,15 +1,15 @@
-import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router'
+import { createRouter, createWebHistory } from 'vue-router'
+import type { RouteRecordRaw } from 'vue-router'
 import { useUserStore } from '@/store/user'
-import { message } from 'ant-design-vue'
 
 const routes: RouteRecordRaw[] = [
   {
     path: '/login',
     name: 'Login',
     component: () => import('@/views/login/index.vue'),
-    meta: { 
+    meta: {
       title: '登录',
-      requiresAuth: false 
+      requiresAuth: false
     }
   },
   {
@@ -27,19 +27,82 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/dashboard/index.vue'),
         meta: {
           title: '仪表盘',
-          icon: 'dashboard',
           requiresAuth: true
         }
       },
       {
         path: 'music',
-        name: 'Music',
-        component: () => import('@/views/music/index.vue'),
+        name: 'MusicManagement',
         meta: {
           title: '音乐管理',
-          icon: 'music',
           requiresAuth: true
-        }
+        },
+        children: [
+          {
+            path: 'songs',
+            name: 'MusicSongs',
+            component: () => import('@/views/music/songs/index.vue'),
+            meta: {
+              title: '音乐',
+              requiresAuth: true
+            }
+          },
+          {
+            path: 'albums',
+            name: 'MusicAlbums',
+            component: () => import('@/views/music/albums/index.vue'),
+            meta: {
+              title: '专辑管理',
+              requiresAuth: true
+            }
+          },
+          {
+            path: 'artists',
+            name: 'MusicArtists',
+            component: () => import('@/views/music/artists/index.vue'),
+            meta: {
+              title: '艺人管理',
+              requiresAuth: true
+            }
+          },
+          {
+            path: 'comments',
+            name: 'MusicComments',
+            component: () => import('@/views/music/comments/index.vue'),
+            meta: {
+              title: '评论管理',
+              requiresAuth: true
+            }
+          }
+        ]
+      },
+      {
+        path: 'posts',
+        name: 'PostsManagement',
+        meta: {
+          title: '帖子管理',
+          requiresAuth: true
+        },
+        children: [
+          {
+            path: 'list',
+            name: 'PostsList',
+            component: () => import('@/views/posts/list/index.vue'),
+            meta: {
+              title: '帖子列表',
+              requiresAuth: true
+            }
+          },
+          {
+            path: 'comments',
+            name: 'PostsComments',
+            component: () => import('@/views/posts/comments/index.vue'),
+            meta: {
+              title: '帖子评论',
+              requiresAuth: true
+            }
+          }
+        ]
       },
       {
         path: 'announcements',
@@ -47,7 +110,6 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/system/announcements.vue'),
         meta: {
           title: '公告管理',
-          icon: 'notification',
           requiresAuth: true
         }
       },
@@ -57,7 +119,6 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/user/index.vue'),
         meta: {
           title: '用户管理',
-          icon: 'user',
           requiresAuth: true
         }
       },
@@ -67,16 +128,19 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/system/logs.vue'),
         meta: {
           title: '系统日志',
-          icon: 'history',
-          requiresAuth: true,
-          roles: ['superadmin']
+          requiresAuth: true
+        }
+      },
+      {
+        path: 'tags',
+        name: 'Tags',
+        component: () => import('@/views/system/tags.vue'),
+        meta: {
+          title: '标签管理',
+          requiresAuth: true
         }
       }
     ]
-  },
-  {
-    path: '/:pathMatch(.*)*',
-    redirect: '/dashboard'
   }
 ]
 

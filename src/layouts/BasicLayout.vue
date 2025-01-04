@@ -8,79 +8,34 @@
       <a-menu
         v-model:selectedKeys="selectedKeys"
         v-model:openKeys="openKeys"
-        theme="dark"
         mode="inline"
+        theme="dark"
       >
-        <a-menu-item key="dashboard">
-          <router-link to="/dashboard">
-            <dashboard-outlined />
-            <span>仪表盘</span>
-          </router-link>
-        </a-menu-item>
-        <a-sub-menu key="resource">
-          <template #title>
-            <span>
-              <folder-outlined />
-              <span>资源管理</span>
-            </span>
+        <template v-for="item in menuConfig" :key="item.key">
+          <template v-if="item.children">
+            <a-sub-menu :key="item.key">
+              <template #title>
+                <component :is="item.icon" />
+                <span>{{ item.title }}</span>
+              </template>
+              <a-menu-item v-for="child in item.children" :key="child.key">
+                <router-link :to="child.path">{{ child.title }}</router-link>
+              </a-menu-item>
+            </a-sub-menu>
           </template>
-          <a-menu-item key="music">
-            <router-link to="/music">
-              <customer-service-outlined />
-              <span>音乐管理</span>
-            </router-link>
-          </a-menu-item>
-          <a-menu-item key="video">
-            <router-link to="/video">视频管理</router-link>
-          </a-menu-item>
-          <a-menu-item key="novel">
-            <router-link to="/novel">小说管理</router-link>
-          </a-menu-item>
-          <a-menu-item key="post">
-            <router-link to="/post">帖子管理</router-link>
-          </a-menu-item>
-        </a-sub-menu>
-
-        <a-sub-menu key="user">
-          <template #title>
-            <span>
-              <user-outlined />
-              <span>用户管理</span>
-            </span>
+          <template v-else>
+            <a-menu-item :key="item.key">
+              <router-link :to="item.path">
+                <component :is="item.icon" />
+                <span>{{ item.title }}</span>
+              </router-link>
+            </a-menu-item>
           </template>
-          <a-menu-item key="users">
-            <router-link to="/users">
-              <team-outlined />
-              <span>用户列表</span>
-            </router-link>
-          </a-menu-item>
-        </a-sub-menu>
-
-        <a-sub-menu key="system">
-          <template #title>
-            <span>
-              <setting-outlined />
-              <span>系统管理</span>
-            </span>
-          </template>
-          <a-menu-item key="announcements">
-            <router-link to="/announcements">
-              <notification-outlined />
-              <span>公告管理</span>
-            </router-link>
-          </a-menu-item>
-          <a-menu-item key="logs" v-if="userStore.role === 'superadmin'">
-            <router-link to="/logs">
-              <history-outlined />
-              <span>系统日志</span>
-            </router-link>
-          </a-menu-item>
-        </a-sub-menu>
+        </template>
       </a-menu>
     </a-layout-sider>
-    
     <a-layout>
-      <a-layout-header style="background: #fff; padding: 0">
+      <a-layout-header class="header">
         <menu-unfold-outlined
           v-if="collapsed"
           class="trigger"
@@ -110,9 +65,29 @@
           </a-dropdown>
         </div>
       </a-layout-header>
-      
-      <a-layout-content style="margin: 24px 16px; padding: 24px; background: #fff">
-        <router-view></router-view>
+      <a-layout-content class="content">
+        <a-tabs
+          v-model:activeKey="tabStore.activeTab"
+          type="editable-card"
+          hide-add
+          @edit="onTabEdit"
+          @change="handleTabChange"
+          class="main-tabs"
+        >
+          <a-tab-pane
+            v-for="tab in tabStore.tabs"
+            :key="tab.key"
+            :tab="tab.title"
+            :closable="tab.closable"
+          >
+            <keep-alive>
+              <component 
+                :is="tab.key === tabStore.activeTab ? 'router-view' : null"
+                :key="tab.path"
+              />
+            </keep-alive>
+          </a-tab-pane>
+        </a-tabs>
       </a-layout-content>
     </a-layout>
   </a-layout>
@@ -122,49 +97,89 @@
 import { ref, watch, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/store/user'
-import {
-  MenuFoldOutlined,
+import { 
+  MenuFoldOutlined, 
   MenuUnfoldOutlined,
   UserOutlined,
-  FolderOutlined,
-  SettingOutlined,
-  LogoutOutlined,
-  DashboardOutlined,
-  CustomerServiceOutlined,
-  MusicOutlined,
-  UserAddOutlined,
-  NotificationOutlined,
-  TeamOutlined,
-  HistoryOutlined
+  LogoutOutlined
 } from '@ant-design/icons-vue'
+import { menuConfig } from '@/config/menu'
 import NotificationBanner from '@/components/NotificationBanner.vue'
 import { wsService } from '@/utils/websocket'
+import { useTabStore } from '@/store/tabs'
 
-const collapsed = ref<boolean>(false)
-const selectedKeys = ref<string[]>(['dashboard'])
-const openKeys = ref<string[]>(['resource'])
-
+const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
-const route = useRoute()
-
+const collapsed = ref(false)
+const selectedKeys = ref<string[]>([])
+const openKeys = ref<string[]>([])
 const notificationBannerRef = ref()
+const tabStore = useTabStore()
 
 const handleLogout = async () => {
   await userStore.logout()
   router.push('/login')
 }
 
+// 根据当前路由更新选中的菜单项
 watch(
   () => route.path,
   (path) => {
-    selectedKeys.value = [path.split('/')[1] || 'dashboard']
-    if (path.includes('music') || path.includes('video') || path.includes('novel') || path.includes('post')) {
-      openKeys.value = ['resource']
+    // 找到当前路由对应的菜单项
+    for (const item of menuConfig) {
+      if (item.children) {
+        const child = item.children.find(child => path.startsWith(child.path))
+        if (child) {
+          selectedKeys.value = [child.key]
+          openKeys.value = [item.key]
+          break
+        }
+      } else if (path === item.path) {
+        selectedKeys.value = [item.key]
+        break
+      }
     }
   },
   { immediate: true }
 )
+
+// 监听路由变化，添加标签页
+watch(
+  () => route.path,
+  (path) => {
+    if (route.name && route.name !== 'Login') {
+      // 确保标签存在并且激活它
+      const tab = tabStore.getTabByName(route.name as string)
+      if (tab) {
+        tabStore.activeTab = tab.key
+      } else {
+        tabStore.addTab(route)
+      }
+    }
+  },
+  { immediate: true }
+)
+
+// 处理标签页的编辑（关闭）
+const onTabEdit = (targetKey: string, action: 'add' | 'remove') => {
+  if (action === 'remove') {
+    tabStore.removeTab(targetKey)
+    // 跳转到当前激活的标签页
+    const activeTab = tabStore.tabs.find(tab => tab.key === tabStore.activeTab)
+    if (activeTab && activeTab.path !== route.path) {
+      router.push(activeTab.path)
+    }
+  }
+}
+
+// 监听标签切换
+const handleTabChange = (key: string) => {
+  const tab = tabStore.tabs.find(tab => tab.key === key)
+  if (tab && tab.path !== route.path) {
+    router.push(tab.path)
+  }
+}
 
 onMounted(() => {
   if (notificationBannerRef.value) {
@@ -181,20 +196,25 @@ onMounted(() => {
 .logo {
   height: 32px;
   margin: 16px;
+  color: white;
+  font-size: 18px;
   display: flex;
   align-items: center;
-  color: white;
+  justify-content: center;
 }
 
-.logo img {
-  height: 32px;
-  margin-right: 8px;
+.header {
+  background: #fff;
+  padding: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .trigger {
+  padding: 0 24px;
   font-size: 18px;
   line-height: 64px;
-  padding: 0 24px;
   cursor: pointer;
   transition: color 0.3s;
 }
@@ -204,7 +224,6 @@ onMounted(() => {
 }
 
 .header-right {
-  float: right;
   margin-right: 24px;
 }
 
@@ -212,5 +231,42 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
+  cursor: pointer;
+}
+
+.content {
+  margin: 0;
+  padding: 0;
+  background: #fff;
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+}
+
+:deep(.main-tabs) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+:deep(.ant-tabs-nav) {
+  margin: 0;
+  padding: 6px 16px 0;
+  background: #fff;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+:deep(.ant-tabs-content) {
+  flex: 1;
+  height: 0;
+}
+
+:deep(.ant-tabs-content-holder) {
+  padding: 16px;
+  height: 100%;
+}
+
+:deep(.ant-tabs-tabpane) {
+  height: 100%;
 }
 </style> 
