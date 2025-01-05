@@ -49,7 +49,7 @@
 import { ref, defineProps, defineEmits } from 'vue'
 import { PlusOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
-import { http } from '@/utils/http'
+import { service } from '@/utils/request'
 import type { Tag } from '@/types/tag'
 
 const props = defineProps<{
@@ -91,15 +91,15 @@ const columns = [
 const fetchTags = async () => {
   loading.value = true
   try {
-    const response = await http.get('/api/admin/tags', {
+    const response = await service.get('/api/admin/tags', {
       params: {
         type: props.type,
         page: 1,
         limit: 100
       }
     })
-    if (response.data.success) {
-      tags.value = response.data.data.items
+    if (response.success) {
+      tags.value = response.data.list
     }
   } catch (error) {
     console.error('获取标签失败:', error)
@@ -116,8 +116,8 @@ const handleAddTag = async () => {
   }
 
   try {
-    const response = await http.post('/api/admin/tags', newTag.value)
-    if (response.data.success) {
+    const response = await service.post('/api/admin/tags', newTag.value)
+    if (response.success) {
       message.success('添加标签成功')
       newTag.value.name = ''
       newTag.value.description = ''
@@ -132,8 +132,8 @@ const handleAddTag = async () => {
 
 const handleDeleteTag = async (tag: Tag) => {
   try {
-    const response = await http.delete(`/api/admin/tags/${tag.id}`)
-    if (response.data.success) {
+    const response = await service.delete(`/api/admin/tags/${tag.id}`)
+    if (response.success) {
       message.success('删除标签成功')
       await fetchTags()
       emit('refresh')

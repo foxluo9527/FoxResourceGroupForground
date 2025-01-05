@@ -79,7 +79,7 @@ import { ref, reactive, onMounted, watch, nextTick } from 'vue'
 import { PlusOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 import type { TablePaginationConfig } from 'ant-design-vue'
-import { http } from '@/utils/http'
+import { service } from '@/utils/request'
 import type { Tag } from '@/types/tag'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -180,26 +180,21 @@ watch(currentType, (newType) => {
 const fetchTags = async () => {
   loading.value = true
   try {
-    const response = await http.get('/api/admin/tags', {
+    const response = await service.get('/api/admin/tags', {
       params: {
         type: currentType.value,
         page: pagination.value.current,
         limit: pagination.value.pageSize
       }
     })
-    console.log('标签数据:', response.data)
-    if (response.data.success) {
-      const items = response.data.data.items
-      console.log('解析后的标签列表:', items)
-      tags.value = items
+    if (response.success) {
+      tags.value = response.data.list
       pagination.value = {
         ...pagination.value,
-        total: response.data.data.total,
-        current: response.data.data.page,
-        pageSize: response.data.data.pageSize
+        total: response.data.total,
+        current: response.data.current,
+        pageSize: response.data.pageSize
       }
-      console.log('更新后的标签列表:', tags.value)
-      console.log('更新后的分页:', pagination.value)
     }
   } catch (error) {
     console.error('获取标签失败:', error)
@@ -258,45 +253,45 @@ const handleSave = async () => {
     }
 
     if (editingTag.value) {
-      const response = await http.put(`/api/admin/tags/${editingTag.value.id}`, data)
-      if (response.data.success) {
+      const response = await service.put(`/api/admin/tags/${editingTag.value.id}`, data)
+      if (response.success) {
         message.success('更新标签成功')
         modalVisible.value = false
         fetchTags()
       } else {
-        message.error(response.data.message || '更新失败')
+        message.error(response.message || '更新失败')
       }
     } else {
-      const response = await http.post('/api/admin/tags', data)
-      if (response.data.success) {
+      const response = await service.post('/api/admin/tags', data)
+      if (response.success) {
         message.success('添加标签成功')
         modalVisible.value = false
         fetchTags()
       } else {
-        message.error(response.data.message || '添加失败')
+        message.error(response.message || '添加失败')
       }
     }
   } catch (error: any) {
     console.error('保存标签失败:', error)
-    message.error(error.response?.data?.message || '保存失败')
+    message.error(error.message || '保存失败')
   }
 }
 
 const handleDelete = async (record: Tag) => {
   try {
-    const response = await http.delete(`/api/admin/tags/${record.id}`)
-    if (response.data.success) {
+    const response = await service.delete(`/api/admin/tags/${record.id}`)
+    if (response.success) {
       message.success('删除标签成功')
       if (tags.value.length === 1 && pagination.value.current > 1) {
         pagination.value.current--
       }
       fetchTags()
     } else {
-      message.error(response.data.message || '删除失败')
+      message.error(response.message || '删除失败')
     }
   } catch (error: any) {
     console.error('删除标签失败:', error)
-    message.error(error.response?.data?.message || '删除失败')
+    message.error(error.message || '删除失败')
   }
 }
 

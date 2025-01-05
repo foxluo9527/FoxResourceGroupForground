@@ -274,7 +274,7 @@ import { PlusOutlined, PictureOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 import type { TablePaginationConfig } from 'ant-design-vue'
 import type { FormInstance } from 'ant-design-vue'
-import { http } from '@/utils/http'
+import { service } from '@/utils/request'
 import defaultCover from '@/assets/default-cover.png'
 import dayjs from 'dayjs'
 import { useRouter, useRoute } from 'vue-router'
@@ -404,16 +404,21 @@ const genderMap = {
 const fetchArtists = async () => {
   loading.value = true
   try {
-    const response = await http.get('/api/admin/artists', {
+    const response = await service.get('/api/admin/artists', {
       params: {
         page: pagination.value.current,
         limit: pagination.value.pageSize,
         keyword: searchKeyword.value
       }
     })
-    if (response.data.success) {
-      artists.value = response.data.data.list
-      pagination.value.total = response.data.data.total
+    if (response.success) {
+      artists.value = response.data.list
+      pagination.value = {
+        ...pagination.value,
+        total: response.data.total,
+        current: response.data.current,
+        pageSize: response.data.pageSize
+      }
     }
   } catch (error) {
     console.error('获取艺人列表失败:', error)
@@ -519,8 +524,8 @@ const handleEdit = (record: any) => {
 // 删除艺人
 const handleDelete = async (record: any) => {
   try {
-    const response = await http.delete(`/api/admin/artists/${record.id}`)
-    if (response.data.success) {
+    const response = await service.delete(`/api/admin/artists/${record.id}`)
+    if (response.success) {
       message.success('删除成功')
       if (artists.value.length === 1 && pagination.value.current > 1) {
         pagination.value.current--
@@ -568,9 +573,9 @@ const handleSubmit = async () => {
       try {
         const formData = new FormData()
         formData.append('file', avatarFileList.value[0].originFileObj)
-        const response = await http.post('/api/upload/image', formData)
-        if (response.data.success) {
-          formState.avatar = response.data.data.url
+        const response = await service.post('/api/upload/image', formData)
+        if (response.success) {
+          formState.avatar = response.data.url
           updateFileStatus(avatarFileList.value, 0, 'done')
         } else {
           throw new Error('头像上传失败')
@@ -587,9 +592,9 @@ const handleSubmit = async () => {
       try {
         const formData = new FormData()
         formData.append('file', coverFileList.value[0].originFileObj)
-        const response = await http.post('/api/upload/image', formData)
-        if (response.data.success) {
-          formState.cover_image = response.data.data.url
+        const response = await service.post('/api/upload/image', formData)
+        if (response.success) {
+          formState.cover_image = response.data.url
           updateFileStatus(coverFileList.value, 0, 'done')
         } else {
           throw new Error('封面上传失败')
@@ -609,10 +614,10 @@ const handleSubmit = async () => {
 
     // 提交表单
     const response = await (formState.id
-      ? http.put(`/api/admin/artists/${formState.id}`, data)
-      : http.post('/api/admin/artists', data))
+      ? service.put(`/api/admin/artists/${formState.id}`, data)
+      : service.post('/api/admin/artists', data))
 
-    if (response.data.success) {
+    if (response.success) {
       message.success(formState.id ? '更新成功' : '添加成功')
       modalVisible.value = false
       fetchArtists()
@@ -641,9 +646,9 @@ watch(modalVisible, (newVal) => {
 // 获取艺人详情
 const fetchArtistDetail = async (id: number) => {
   try {
-    const response = await http.get(`/api/admin/artists/${id}`)
-    if (response.data.success) {
-      currentArtist.value = response.data.data.data
+    const response = await service.get(`/api/admin/artists/${id}`)
+    if (response.success) {
+      currentArtist.value = response.data
       drawerVisible.value = true
     }
   } catch (error) {

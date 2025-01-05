@@ -12,7 +12,7 @@
           <a-select-option value="playlist">歌单</a-select-option>
         </a-select>
         <a-input-search
-          v-model:value="queryParams.title"
+          v-model:value="searchKeyword"
           placeholder="搜索专辑名称"
           style="width: 200px"
           @search="handleSearch"
@@ -201,7 +201,7 @@ import {
 } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 import type { TablePaginationConfig } from 'ant-design-vue'
-import { http } from '@/utils/http'
+import { service } from '@/utils/request'
 import defaultCover from '@/assets/default-cover.png'
 import dayjs from 'dayjs'
 import MusicDetailDrawer from '@/components/MusicDetailDrawer.vue'
@@ -284,6 +284,7 @@ const trackColumns = [
 
 const loading = ref(false)
 const albums = ref([])
+const searchKeyword = ref('')
 const pagination = ref<TablePaginationConfig>({
   total: 0,
   current: 1,
@@ -310,18 +311,22 @@ const formatDuration = (seconds: number) => {
 const fetchAlbums = async () => {
   loading.value = true
   try {
-    const response = await http.get('/api/admin/albums', {
+    const response = await service.get('/api/admin/albums', {
       params: {
         page: pagination.value.current,
         limit: pagination.value.pageSize,
-        title: queryParams.title,
-        type: queryParams.type
+        type: queryParams.type,
+        keyword: searchKeyword.value
       }
     })
-    if (response.data.success) {
-      console.log('专辑列表数据:', response.data.data.list)
-      albums.value = response.data.data.list
-      pagination.value.total = response.data.data.total
+    if (response.success) {
+      albums.value = response.data.list
+      pagination.value = {
+        ...pagination.value,
+        total: response.data.total,
+        current: response.data.current,
+        pageSize: response.data.pageSize
+      }
     }
   } catch (error) {
     console.error('获取专辑列表失败:', error)
@@ -334,9 +339,9 @@ const fetchAlbums = async () => {
 // 获取专辑详情
 const fetchAlbumDetail = async (id: number) => {
   try {
-    const response = await http.get(`/api/admin/albums/${id}`)
-    if (response.data.success) {
-      currentAlbum.value = response.data.data
+    const response = await service.get(`/api/admin/albums/${id}`)
+    if (response.success) {
+      currentAlbum.value = response.data
     }
   } catch (error) {
     console.error('获取专辑详情失败:', error)
@@ -394,8 +399,8 @@ const handleEdit = (record: any) => {
 // 删除专辑
 const handleDelete = async (record: any) => {
   try {
-    const response = await http.delete(`/api/admin/albums/${record.id}`)
-    if (response.data.success) {
+    const response = await service.delete(`/api/admin/albums/${record.id}`)
+    if (response.success) {
       message.success('删除成功')
       if (albums.value.length === 1 && pagination.value.current > 1) {
         pagination.value.current--

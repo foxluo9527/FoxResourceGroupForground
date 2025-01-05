@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 import { useUserStore } from '@/store/user'
+import ReportManagement from '@/views/ReportManagement.vue';
 
 const routes: RouteRecordRaw[] = [
   {
@@ -31,48 +32,34 @@ const routes: RouteRecordRaw[] = [
         }
       },
       {
-        path: 'music',
-        name: 'MusicManagement',
-        meta: {
-          title: '音乐管理',
-          requiresAuth: true
-        },
+        path: '/music',
+        name: 'Music',
+        redirect: '/music/songs',
+        meta: { title: '音乐管理' },
         children: [
           {
             path: 'songs',
-            name: 'MusicSongs',
+            name: 'Songs',
             component: () => import('@/views/music/songs/index.vue'),
-            meta: {
-              title: '音乐',
-              requiresAuth: true
-            }
-          },
-          {
-            path: 'albums',
-            name: 'MusicAlbums',
-            component: () => import('@/views/music/albums/index.vue'),
-            meta: {
-              title: '专辑管理',
-              requiresAuth: true
-            }
+            meta: { title: '音乐列表' }
           },
           {
             path: 'artists',
-            name: 'MusicArtists',
+            name: 'Artists',
             component: () => import('@/views/music/artists/index.vue'),
-            meta: {
-              title: '艺人管理',
-              requiresAuth: true
-            }
+            meta: { title: '艺人管理' }
+          },
+          {
+            path: 'albums',
+            name: 'Albums',
+            component: () => import('@/views/music/albums/index.vue'),
+            meta: { title: '专辑管理' }
           },
           {
             path: 'comments',
             name: 'MusicComments',
             component: () => import('@/views/music/comments/index.vue'),
-            meta: {
-              title: '评论管理',
-              requiresAuth: true
-            }
+            meta: { title: '评论管理' }
           }
         ]
       },
@@ -139,6 +126,24 @@ const routes: RouteRecordRaw[] = [
           title: '标签管理',
           requiresAuth: true
         }
+      },
+      {
+        path: 'report-management',
+        name: 'ReportManagement',
+        component: ReportManagement,
+        meta: {
+          title: '举报管理',
+          requiresAuth: true
+        }
+      },
+      {
+        path: '/profile',
+        name: 'Profile',
+        component: () => import('@/views/profile/index.vue'),
+        meta: {
+          title: '个人信息',
+          icon: 'user-outlined'
+        }
       }
     ]
   }
@@ -165,4 +170,4 @@ router.beforeEach((to, from, next) => {
   }
 })
 
-export default router 
+export default router

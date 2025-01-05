@@ -17,6 +17,8 @@
       :pagination="pagination"
       row-key="id"
       @change="handleTableChange"
+      :custom-row="customRow"
+      :row-class-name="() => 'clickable-row'"
     >
       <!-- 作者信息列 -->
       <template #author="{ record }">
@@ -36,6 +38,12 @@
       <!-- 评论内容列 -->
       <template #content="{ record }">
         <div class="comment-content">
+          <template v-if="record.parent_id">
+            <div class="reply-info">
+              回复 {{ record.parent_author_name }}：
+              <div class="parent-content">{{ record.parent_content }}</div>
+            </div>
+          </template>
           <div>{{ record.content }}</div>
           <div v-if="record.images?.length" class="comment-images">
             <a-image-preview-group>
@@ -62,14 +70,23 @@
         </a-space>
       </template>
     </a-table>
+
+    <!-- 添加评论详情抽屉 -->
+    <post-comment-detail-drawer
+      v-model:visible="detailDrawerVisible"
+      :comment="currentComment"
+      @close="handleDrawerClose"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch, watchEffect, nextTick } from 'vue'
 import { message, Modal } from 'ant-design-vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import request from '@/utils/request'
+import PostCommentDetailDrawer from '@/components/PostCommentDetailDrawer.vue'
+import { getPostCommentDetail } from '@/api/posts'
 
 interface Comment {
   id: number
@@ -89,6 +106,7 @@ interface Comment {
 }
 
 const router = useRouter()
+const route = useRoute()
 const loading = ref(false)
 const comments = ref<Comment[]>([])
 const queryParams = ref({
@@ -164,9 +182,12 @@ const fetchComments = async () => {
 
     if (response.success) {
       comments.value = response.data.list
-      pagination.value.total = response.data.pagination.total
+      pagination.value.total = response.data.total
+      pagination.value.current = response.data.current
+      pagination.value.pageSize = response.data.pageSize
     }
   } catch (error) {
+    console.error('获取评论列表失败:', error)
     message.error('获取评论列表失败')
   } finally {
     loading.value = false
@@ -223,6 +244,76 @@ const handleDeleteComment = (comment: Comment) => {
   })
 }
 
+const detailDrawerVisible = ref(false)
+const currentComment = ref(null)
+
+// 获取评论详情
+const fetchCommentDetail = async (id: number) => {
+  // 如果已经是当前评论，不重复请求
+  if (currentComment.value?.id === id) {
+    detailDrawerVisible.value = true
+    return
+  }
+
+  try {
+    const response = await getPostCommentDetail(id)
+    if (response.success) {
+      currentComment.value = response.data
+      detailDrawerVisible.value = true
+    }
+  } catch (error) {
+    console.error('获取评论详情失败:', error)
+    message.error('获取评论详情失败:' + error.message)
+  }
+}
+
+// 使用 watch 监听路由参数变化
+watch(
+  () => route.query.commentId,
+  (newCommentId) => {
+    if (newCommentId) {
+      fetchCommentDetail(Number(newCommentId))
+    } else {
+      detailDrawerVisible.value = false
+      currentComment.value = null
+    }
+  },
+  { immediate: true } // 立即执行一次
+)
+
+// 处理查看详情
+const handleView = (record: any) => {
+  // 如果已经打开了同一条评论的详情，不需要重新请求
+  if (route.query.commentId === String(record.id)) {
+    return
+  }
+  
+  // 更新 URL
+  router.push({
+    query: { ...route.query, commentId: record.id }
+  })
+}
+
+// 关闭抽屉
+const handleDrawerClose = () => {
+  router.push({
+    query: { ...route.query, commentId: undefined }
+  })
+}
+
+// 表格行点击配置
+const customRow = (record: any) => {
+  return {
+    onClick: (event: MouseEvent) => {
+      const target = event.target as HTMLElement
+      if (target.closest('.ant-btn') || target.closest('a')) {
+        return
+      }
+      handleView(record)
+    }
+  }
+}
+
 onMounted(() => {
   fetchComments()
 })
@@ -245,5 +336,28 @@ onMounted(() => {
 
 .comment-images {
   margin-top: 8px;
+}
+
+/* 添加点击样式 */
+:deep(.clickable-row) {
+  cursor: pointer;
+}
+
+:deep(.clickable-row:hover) {
+  background-color: #f5f5f5;
+}
+
+.reply-info {
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.parent-content {
+  color: rgba(0, 0, 0, 0.65);
+  margin-top: 4px;
+  padding: 8px;
+  background: #f5f5f5;
+  border-radius: 4px;
 }
 </style> 

@@ -692,7 +692,7 @@ import { Empty } from 'ant-design-vue'
 
 import type { TablePaginationConfig } from 'ant-design-vue'
 
-import { http } from '@/utils/http'
+import { service } from '@/utils/request'
 
 import type { Music } from '@/types/music'
 
@@ -970,7 +970,7 @@ const handleToggleReplies = async (comment: any) => {
 
       try {
 
-        const response = await http.get(`/api/music-comments/${comment.id}/replies`, {
+        const response = await service.get(`/api/music-comments/${comment.id}/replies`, {
 
           params: {
 
@@ -982,9 +982,9 @@ const handleToggleReplies = async (comment: any) => {
 
         })
 
-        if (response.data.success) {
+        if (response.success) {
 
-          comment.replies = response.data.data.items
+          comment.replies = response.data.list
 
         }
 
@@ -1016,7 +1016,7 @@ const fetchTags = async () => {
 
   try {
 
-    const response = await http.get<{ data: TagListResponse }>('/api/admin/tags', {
+    const response = await service.get<{ data: TagListResponse }>('/api/admin/tags', {
 
       params: {
 
@@ -1030,9 +1030,9 @@ const fetchTags = async () => {
 
     })
 
-    if (response.data.success) {
+    if (response.success) {
 
-      tags.value = response.data.data.items
+      tags.value = response.data.list
 
     }
 
@@ -1058,7 +1058,7 @@ const fetchMusicList = async () => {
 
   try {
 
-    const response = await http.get('/api/admin/music', {
+    const response = await service.get('/api/admin/music', {
 
       params: {
 
@@ -1074,19 +1074,19 @@ const fetchMusicList = async () => {
 
     })
 
-    if (response.data.success) {
+    if (response.success) {
 
-      musicList.value = response.data.data.list
+      musicList.value = response.data.list
 
       pagination.value = {
 
         ...pagination.value,
 
-        total: response.data.data.total,
+        total: response.data.total,
 
-        current: response.data.data.current,
+        current: response.data.current,
 
-        pageSize: response.data.data.pageSize
+        pageSize: response.data.pageSize
 
       }
 
@@ -1095,6 +1095,8 @@ const fetchMusicList = async () => {
   } catch (error) {
 
     console.error('获取音乐列表失败:', error)
+
+    message.error('获取音乐列表失败')
 
   } finally {
 
@@ -1172,11 +1174,10 @@ const handleView = async (record: Music) => {
 
   try {
 
-    const response = await http.get(`/api/admin/music/${record.id}`)
+    const response = await service.get(`/api/admin/music/${record.id}`)
 
-    if (response.data.success) {
-
-      currentMusic.value = response.data.data
+    if (response.success) {
+      currentMusic.value = response.data
 
       drawerVisible.value = true
 
@@ -1220,9 +1221,9 @@ const handleDelete = async (record: Music) => {
 
   try {
 
-    const response = await http.delete(`/api/admin/music/${record.id}`)
+    const response = await service.delete(`/api/admin/music/${record.id}`)
 
-    if (response.data.success) {
+    if (response.success) {
 
       message.success('删除成功')
 
@@ -1270,7 +1271,7 @@ const handlePlay = async () => {
 
     // 可以在这里添加播放量统计等逻辑
 
-    await http.post(`/api/admin/music/${currentMusic.value?.id}/play`)
+    await service.post(`/api/admin/music/${currentMusic.value?.id}/play`)
 
   } catch (error) {
 
@@ -1390,11 +1391,11 @@ watch(
 
       try {
 
-        const response = await http.get(`/api/admin/music/${newMusicId}`)
+        const response = await service.get(`/api/admin/music/${newMusicId}`)
 
-        if (response.data.success) {
+        if (response.success) {
 
-          currentMusic.value = response.data.data
+          currentMusic.value = response.data
 
           drawerVisible.value = true
 
@@ -1562,7 +1563,7 @@ const fetchComments = async () => {
 
   try {
 
-    const response = await http.get('/api/music-comments', {
+    const response = await service.get('/api/music-comments', {
 
       params: {
 
@@ -1576,11 +1577,11 @@ const fetchComments = async () => {
 
     })
 
-    if (response.data.success) {
+    if (response.success) {
 
-      comments.value = response.data.data.items
+      comments.value = response.data.list
 
-      total.value = response.data.data.total
+      total.value = response.data.total
 
     }
 
@@ -1616,9 +1617,9 @@ const handleDeleteComment = async (comment: any) => {
 
   try {
 
-    const response = await http.delete(`/api/admin/music-comments/${comment.id}`)
+    const response = await service.delete(`/api/admin/music-comments/${comment.id}`)
 
-    if (response.data.success) {
+    if (response.success) {
 
       message.success('删除成功')
 
@@ -1646,9 +1647,9 @@ const handleDeleteReply = async (comment: any, reply: any) => {
 
   try {
 
-    const response = await http.delete(`/api/admin/music-comments/${reply.id}`)
+    const response = await service.delete(`/api/admin/music-comments/${reply.id}`)
 
-    if (response.data.success) {
+    if (response.success) {
 
       message.success('删除成功')
 
@@ -1656,7 +1657,7 @@ const handleDeleteReply = async (comment: any, reply: any) => {
 
       if (isExpanded(comment)) {
 
-        const repliesResponse = await http.get(`/api/music-comments/${comment.id}/replies`, {
+        const repliesResponse = await service.get(`/api/music-comments/${comment.id}/replies`, {
 
           params: {
 
@@ -1789,7 +1790,6 @@ onMounted(() => {
 })
 
 </script>
-
 
 
 <style scoped>
@@ -2689,3 +2689,4 @@ pre {
 }
 
 </style> 
+

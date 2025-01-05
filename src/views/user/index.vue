@@ -580,6 +580,7 @@ const debouncedShowUserDetail = (id: number) => {
     })
     .catch(() => {
       message.error('获取用户详情失败')
+      console.error('获取用户详情失败:', error)
     })
     .finally(() => {
       loading.value = false
@@ -830,7 +831,9 @@ const fetchUserPosts = async () => {
     })
     if (response.success) {
       userPosts.value = response.data.list
-      postsPagination.value.total = response.data.pagination.total
+      postsPagination.value.total = response.data.total
+      postsPagination.value.current = response.data.current
+      postsPagination.value.pageSize = response.data.pageSize
     }
   } catch (error) {
     message.error('获取用户帖子失败')

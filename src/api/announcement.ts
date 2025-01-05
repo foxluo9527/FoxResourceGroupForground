@@ -48,7 +48,7 @@ interface AnnouncementListResult {
 }
 
 // 获取公告列表
-export const getAnnouncements = (params?: GetAnnouncementsParams) => {
+export const getAnnouncements = (params?: any) => {
   return request<{
     code: number
     message: string

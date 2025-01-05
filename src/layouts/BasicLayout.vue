@@ -48,17 +48,22 @@
         />
         <div class="header-right">
           <a-dropdown>
-            <a class="ant-dropdown-link" @click.prevent>
-              <a-avatar :size="32" icon="user" />
-              <span>{{ userStore.username }} ({{ userStore.roleLabel }})</span>
-            </a>
+            <div class="user-dropdown">
+              <a-avatar :src="userInfo?.avatar">
+                {{ userInfo?.nickname?.[0]?.toUpperCase() || userInfo?.username?.[0]?.toUpperCase() }}
+              </a-avatar>
+              <span class="username">{{ userInfo?.nickname || userInfo?.username }}</span>
+            </div>
             <template #overlay>
               <a-menu>
-                <a-menu-item key="profile">
-                  <user-outlined />个人信息
+                <a-menu-item key="profile" @click="goToProfile">
+                  <user-outlined />
+                  <span>个人主页</span>
                 </a-menu-item>
+                <a-menu-divider />
                 <a-menu-item key="logout" @click="handleLogout">
-                  <logout-outlined />退出登录
+                  <logout-outlined />
+                  <span>退出登录</span>
                 </a-menu-item>
               </a-menu>
             </template>
@@ -107,6 +112,7 @@ import { menuConfig } from '@/config/menu'
 import NotificationBanner from '@/components/NotificationBanner.vue'
 import { wsService } from '@/utils/websocket'
 import { useTabStore } from '@/store/tabs'
+import { service } from '@/utils/request'
 
 const route = useRoute()
 const router = useRouter()
@@ -116,6 +122,7 @@ const selectedKeys = ref<string[]>([])
 const openKeys = ref<string[]>([])
 const notificationBannerRef = ref()
 const tabStore = useTabStore()
+const userInfo = ref(null)
 
 const handleLogout = async () => {
   await userStore.logout()
@@ -181,10 +188,28 @@ const handleTabChange = (key: string) => {
   }
 }
 
+// 获取用户信息
+const fetchUserInfo = async () => {
+  try {
+    const response = await service.get('/api/auth/profile')
+    if (response.success) {
+      userInfo.value = response.data
+    }
+  } catch (error) {
+    console.error('获取用户信息失败:', error)
+  }
+}
+
+// 跳转到个人主页
+const goToProfile = () => {
+  router.push('/profile')
+}
+
 onMounted(() => {
   if (notificationBannerRef.value) {
     wsService.setNotificationBanner(notificationBannerRef.value)
   }
+  fetchUserInfo()
 })
 </script>
 
@@ -268,5 +293,22 @@ onMounted(() => {
 
 :deep(.ant-tabs-tabpane) {
   height: 100%;
+}
+
+.user-dropdown {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  padding: 0 12px;
+}
+
+.username {
+  margin-left: 8px;
+  color: rgba(0, 0, 0, 0.85);
+}
+
+:deep(.ant-dropdown-trigger) {
+  display: flex;
+  align-items: center;
 }
 </style> 

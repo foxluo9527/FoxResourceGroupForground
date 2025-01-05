@@ -10,9 +10,9 @@
     <a-descriptions :column="1" bordered>
       <a-descriptions-item label="封面">
         <a-image
-          :width="200"
-          :src="currentMusic?.cover_image"
-          :fallback="defaultCover"
+          :src="music.cover || DEFAULT_COVER"
+          :width="100"
+          style="object-fit: cover; border-radius: 4px;"
         />
       </a-descriptions-item>
 
@@ -160,8 +160,8 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { http } from '@/utils/http'
-import defaultCover from '@/assets/default-cover.png'
+import { service } from '@/utils/request'
+import { DEFAULT_COVER } from '@/constants'
 import { message, Avatar, Space, Tag } from 'ant-design-vue'
 import { LikeOutlined } from '@ant-design/icons-vue'
 import dayjs from 'dayjs'
@@ -178,9 +178,10 @@ const currentMusic = ref<any>(null)
 // 获取音乐详情
 const fetchMusicDetail = async (id: number) => {
   try {
-    const response = await http.get(`/api/admin/music/${id}`)
-    if (response.data.success) {
-      currentMusic.value = response.data.data
+    const response = await service.get(`/api/admin/music/${id}`)
+    if (response.success) {
+      currentMusic.value = response.data
+      console.log('currentMusic', currentMusic.value)
     }
   } catch (error) {
     console.error('获取音乐详情失败:', error)
@@ -226,16 +227,16 @@ const fetchComments = async () => {
   if (!props.musicId) return // 如果没有音乐 ID 则不获取评论
   
   try {
-    const response = await http.get('/api/music-comments', {
+    const response = await service.get('/api/music-comments', {
       params: {
         page: current.value,
         limit: pageSize.value,
         music_id: props.musicId
       }
     })
-    if (response.data.success) {
-      comments.value = response.data.data.items
-      total.value = response.data.data.total
+    if (response.success) {
+      comments.value = response.data.list
+      total.value = response.data.total
     }
   } catch (error) {
     console.error('获取评论列表失败:', error)
@@ -246,15 +247,15 @@ const fetchComments = async () => {
 // 加载更多回复
 const loadMoreReplies = async (comment: any) => {
   try {
-    const response = await http.get(`/api/music-comments/${comment.id}/replies`, {
+    const response = await service.get(`/api/music-comments/${comment.id}/replies`, {
       params: {
         page: 1,
         limit: comment.reply_count
       }
     })
-    if (response.data.success) {
+    if (response.success) {
       // 更新评论的回复列表
-      comment.replies = response.data.data.items
+      comment.replies = response.data.list
     }
   } catch (error) {
     console.error('获取回复列表失败:', error)

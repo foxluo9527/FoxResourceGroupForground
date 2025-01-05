@@ -23,21 +23,18 @@
       :columns="columns"
       :data-source="comments"
       :loading="loading"
-      :pagination="{
-        ...pagination,
-        showSizeChanger: true,
-        showTotal: (total) => `共 ${total} 条`,
-        pageSizeOptions: ['10', '20', '50', '100']
-      }"
+      :pagination="pagination"
       @change="handleTableChange"
       row-key="id"
+      :custom-row="customRow"
+      :row-class-name="() => 'clickable-row'"
     >
       <!-- 用户信息 -->
       <template #user="{ record }">
         <a-space>
           <div class="user-info clickable" @click="handleUserClick(record.user?.id)">
             <a-avatar :size="32" :src="record.user?.avatar">
-              {{ record.user?.username?.charAt(0)?.toUpperCase() || '?' }}
+              {{ record.user?.username?.[0]?.toUpperCase() || '?' }}
             </a-avatar>
             <span>{{ record.user?.username }}</span>
           </div>
@@ -49,7 +46,7 @@
         <div class="comment-content">
           <template v-if="record.parent_content">
             <div class="reply-info">
-              回复 {{ record.parent_user_nickname || record.parent_user_name }}：
+              回复 {{ record.parent_username }}：
               <span class="parent-content">{{ record.parent_content }}</span>
             </div>
           </template>
@@ -61,7 +58,7 @@
       <template #music="{ record }">
         <a 
           class="music-link" 
-          @click.prevent.stop="handleMusicClick(record.music?.id)"
+          @click="handleMusicClick(record.music?.id)"
         >
           {{ record.music?.title }}
         </a>
@@ -69,37 +66,41 @@
 
       <!-- 操作 -->
       <template #action="{ record }">
-        <a-popconfirm
-          title="确定要删除这条评论吗？"
-          @confirm="handleDelete(record)"
-        >
-          <a class="danger">删除</a>
-        </a-popconfirm>
+        <a-space>
+          <a-popconfirm
+            title="确定要删除这条评论吗？"
+            @confirm="handleDelete(record)"
+          >
+            <a class="danger">删除</a>
+          </a-popconfirm>
+        </a-space>
       </template>
     </a-table>
 
-    <!-- 音乐详情抽屉 -->
-    <music-detail-drawer
-      v-model:visible="musicDrawerVisible"
-      :music-id="currentMusicId"
+    <!-- 评论详情抽屉 -->
+    <music-comment-detail-drawer
+      v-model:visible="detailDrawerVisible"
+      :comment="currentComment"
+      @close="handleDrawerClose"
     />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch, onUnmounted, nextTick } from 'vue'
+import { ref, onMounted, watch, onUnmounted, nextTick, computed, watchEffect } from 'vue'
 import { FilterOutlined } from '@ant-design/icons-vue'
 import { message } from 'ant-design-vue'
 import type { TablePaginationConfig } from 'ant-design-vue'
-import { http } from '@/utils/http'
+import { service } from '@/utils/request'
 import dayjs from 'dayjs'
 import MusicDetailDrawer from '@/components/MusicDetailDrawer.vue'
 import { useRoute, useRouter } from 'vue-router'
+import MusicCommentDetailDrawer from '@/components/MusicCommentDetailDrawer.vue'
 
 const columns = [
   {
     title: '用户',
-    dataIndex: 'user_name',
+    dataIndex: 'user',
     width: 200,
     slots: { customRender: 'user' }
   },
@@ -110,7 +111,7 @@ const columns = [
   },
   {
     title: '音乐',
-    dataIndex: ['music', 'title'],
+    dataIndex: 'music',
     width: 200,
     slots: { customRender: 'music' }
   },
@@ -157,14 +158,14 @@ const router = useRouter()
 const fetchMusicOptions = async () => {
   musicOptionsLoading.value = true
   try {
-    const response = await http.get('/api/admin/music', {
+    const response = await service.get('/api/admin/music', {
       params: {
         page: 1,
         limit: 1000 // 获取所有音乐用于筛选
       }
     })
-    if (response.data.success) {
-      musicOptions.value = response.data.data.list.map((item: any) => ({
+    if (response.success) {
+      musicOptions.value = response.data.list.map((item: any) => ({
         label: item.title,
         value: item.id
       }))
@@ -190,16 +191,22 @@ watch(
 const fetchComments = async () => {
   loading.value = true
   try {
-    const response = await http.get('/api/admin/music-comments', {
+    const response = await service.get('/api/admin/music-comments', {
       params: {
         page: pagination.value.current,
         limit: pagination.value.pageSize,
-        music_id: selectedMusicId.value // 直接使用 selectedMusicId，undefined 时会自动忽略该参数
+        music_id: selectedMusicId.value
       }
     })
-    if (response.data.success) {
-      comments.value = response.data.data.items
-      pagination.value.total = response.data.data.total
+    
+    if (response.success) {
+      comments.value = response.data.list
+      pagination.value = {
+        ...pagination.value,
+        total: response.data.total,
+        current: response.data.current,
+        pageSize: response.data.pageSize
+      }
     }
   } catch (error) {
     console.error('获取评论列表失败:', error)
@@ -224,8 +231,8 @@ const handleTableChange = (pag: TablePaginationConfig) => {
 // 删除评论
 const handleDelete = async (record: any) => {
   try {
-    const response = await http.delete(`/api/admin/music-comments/${record.id}`)
-    if (response.data.success) {
+    const response = await service.delete(`/api/admin/music-comments/${record.id}`)
+    if (response.success) {
       message.success('删除成功')
       if (comments.value.length === 1 && pagination.value.current > 1) {
         pagination.value.current--
@@ -264,6 +271,67 @@ const handleUserClick = (userId: number | undefined) => {
     },
     replace: true
   })
+}
+
+const detailDrawerVisible = ref(false)
+const currentComment = ref(null)
+
+// 获取评论详情
+const fetchCommentDetail = async (id: number) => {
+  try {
+    const response = await service.get(`/api/admin/music-comments/${id}`)
+    if (response.success) {
+      currentComment.value = response.data
+    }
+  } catch (error) {
+    console.error('获取评论详情失败:', error)
+    message.error('获取评论详情失败:' + error.message)
+  }
+}
+
+// 处理查看详情
+const handleView = (record: any) => {
+  router.replace({
+    query: { ...route.query, commentId: record.id }
+  })
+}
+
+// 1. 移除 watch 监听，改用 computed 和 watchEffect
+const commentId = computed(() => route.query.commentId)
+
+// 2. 使用 watchEffect 统一管理评论详情的显示逻辑
+watchEffect(async () => {
+  const currentCommentId = commentId.value
+  
+  if (currentCommentId) {
+    if (!currentComment.value || currentComment.value.id !== Number(currentCommentId)) {
+      await fetchCommentDetail(Number(currentCommentId))
+    }
+    detailDrawerVisible.value = true
+  } else {
+    detailDrawerVisible.value = false
+    currentComment.value = null
+  }
+})
+
+// 关闭抽屉时清除路由参数
+const handleDrawerClose = () => {
+  router.replace({
+    query: { ...route.query, commentId: undefined }
+  })
+}
+
+// 表格行点击配置
+const customRow = (record: any) => {
+  return {
+    onClick: (event: MouseEvent) => {
+      const target = event.target as HTMLElement
+      if (target.closest('.ant-btn') || target.closest('a')) {
+        return
+      }
+      handleView(record)
+    }
+  }
 }
 
 onMounted(() => {
@@ -341,5 +409,13 @@ onUnmounted(() => {
 
 .clickable:hover {
   opacity: 0.8;
+}
+
+:deep(.clickable-row) {
+  cursor: pointer;
+}
+
+:deep(.clickable-row:hover) {
+  background-color: #f5f5f5;
 }
 </style> 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { http } from '@/utils/http'
+import { ref, onMounted, computed } from 'vue'
+import { service } from '@/utils/request'
 import { message } from 'ant-design-vue'
 
 interface Notification {
@@ -42,9 +42,9 @@ const emit = defineEmits(['update:unread-count'])
 // 获取未读通知数
 const fetchUnreadCount = async () => {
   try {
-    const response = await http.get('/api/notifications/unread')
-    if (response.data.success) {
-      unreadCount.value = response.data.data.count
+    const response = await service.get('/api/notifications/unread')
+    if (response.success) {
+      unreadCount.value = response.data.count
       emit('update:unread-count', unreadCount.value)
     }
   } catch (error) {
@@ -55,16 +55,19 @@ const fetchUnreadCount = async () => {
 const fetchNotifications = async () => {
   loading.value = true
   try {
-    const response = await http.get<ApiResponse>('/api/notifications', {
+    const response = await service.get('/api/notifications', {
       params: {
         page: currentPage.value,
         limit: pageSize.value
       }
     })
     
-    if (response.data.success) {
-      notifications.value = response.data.data.notifications
-      total.value = response.data.data.total
+    if (response.success) {
+      notifications.value = response.data.list || []
+      total.value = response.data.total || 0
+      // 如果后端没有返回当前页和每页数量，就使用前端的值
+      currentPage.value = response.data.current || currentPage.value
+      pageSize.value = response.data.pageSize || pageSize.value
       await fetchUnreadCount() // 更新未读数
     }
   } catch (error) {
@@ -78,7 +81,7 @@ const fetchNotifications = async () => {
 // 标记单个通知为已读
 const markAsRead = async (id: number) => {
   try {
-    await http.post('/api/notifications/read', {
+    await service.post('/api/notifications/read', {
       ids: [id]
     })
     message.success('标记已读成功')
@@ -92,7 +95,7 @@ const markAsRead = async (id: number) => {
 // 全部标记已读
 const markAllAsRead = async () => {
   try {
-    await http.post('/api/notifications/read-all')
+    await service.post('/api/notifications/read-all')
     message.success('全部标记已读成功')
     await fetchNotifications() // 刷新列表
   } catch (error) {
@@ -113,6 +116,15 @@ const handleItemClick = async (item: Notification) => {
   }
 }
 
+const pagination = computed(() => ({
+  current: currentPage.value,
+  pageSize: pageSize.value,
+  total: total.value,
+  onChange: handlePageChange,
+  showSizeChanger: true,
+  showTotal: (total: number) => `共 ${total} 条`
+}))
+
 onMounted(() => {
   fetchNotifications()
 })
@@ -127,12 +139,7 @@ defineExpose({
     <a-spin :spinning="loading">
       <a-list
         :data-source="notifications"
-        :pagination="{
-          current: currentPage,
-          pageSize: pageSize,
-          total: total,
-          onChange: handlePageChange
-        }"
+        :pagination="pagination"
       >
         <template #renderItem="{ item }">
           <a-list-item 

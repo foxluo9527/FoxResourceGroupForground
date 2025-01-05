@@ -167,7 +167,7 @@ import { message } from 'ant-design-vue'
 import { PlusOutlined, UploadOutlined } from '@ant-design/icons-vue'
 import type { UploadProps } from 'ant-design-vue'
 import type { FormInstance } from 'ant-design-vue'
-import { http } from '@/utils/http'
+import { service } from '@/utils/request'
 
 interface Props {
   visible: boolean
@@ -229,11 +229,11 @@ const rules = {
 const fetchArtists = async () => {
   artistsLoading.value = true
   try {
-    const response = await http.get('/api/admin/artists', {
+    const response = await service.get('/api/admin/artists', {
       params: { page: 1, limit: 100 }
     })
-    if (response.data.success) {
-      artists.value = response.data.data.list
+    if (response.success) {
+      artists.value = response.data.list
     }
   } catch (error) {
     console.error('获取艺人列表失败:', error)
@@ -246,15 +246,15 @@ const fetchArtists = async () => {
 const fetchAlbums = async (artistId?: number) => {
   albumsLoading.value = true
   try {
-    const response = await http.get('/api/albums', {
+    const response = await service.get('/api/albums', {
       params: { 
         page: 1, 
         limit: 100,
         artist_id: artistId
       }
     })
-    if (response.data.success) {
-      albums.value = response.data.data.albums
+    if (response.success) {
+      albums.value = response.data.albums
     }
   } catch (error) {
     console.error('获取专辑列表失败:', error)
@@ -267,15 +267,15 @@ const fetchAlbums = async (artistId?: number) => {
 const fetchTags = async () => {
   tagsLoading.value = true
   try {
-    const response = await http.get('/api/admin/tags', {
+    const response = await service.get('/api/admin/tags', {
       params: {
         type: 'music',
         page: 1,
         limit: 100
       }
     })
-    if (response.data.success) {
-      tags.value = response.data.data.items
+    if (response.success) {
+      tags.value = response.data.list
     }
   } catch (error) {
     console.error('获取标签失败:', error)
@@ -316,17 +316,17 @@ const handleAudioUpload = async (options: any) => {
     
     const formData = new FormData()
     formData.append('file', options.file)
-    const response = await http.post('/api/upload/audio', formData)
+    const response = await service.post('/api/upload/audio', formData)
     console.log('音频上传响应:', response)
     
-    if (response.data.success) {
-      formState.url = response.data.data.url
+    if (response.success) {
+      formState.url = response.data.url
       formState.duration = duration // 设置时长
       audioFileList.value = [{
         uid: '1',
         name: options.file.name,
         status: 'done',
-        url: response.data.data.url
+        url: response.data.url
       }]
       options.onSuccess()
     } else {
@@ -412,9 +412,9 @@ const beforeLyricsUpload: UploadProps['beforeUpload'] = (file) => {
 // 获取音乐详情
 const fetchMusicDetail = async (id: number) => {
   try {
-    const response = await http.get(`/api/admin/music/${id}`)
-    if (response.data.success) {
-      const music = response.data.data
+    const response = await service.get(`/api/admin/music/${id}`)
+    if (response.success) {
+      const music = response.data
       // 填充表单数据
       formState.title = music.title
       formState.description = music.description
@@ -501,9 +501,9 @@ const handleSubmit = async () => {
       try {
         const formData = new FormData()
         formData.append('file', imageFileList.value[0].originFileObj)
-        const response = await http.post('/api/upload/image', formData)
-        if (response.data.success) {
-          formState.cover_image = response.data.data.url
+        const response = await service.post('/api/upload/image', formData)
+        if (response.success) {
+          formState.cover_image = response.data.url
         } else {
           throw new Error('图片上传失败')
         }
@@ -519,9 +519,9 @@ const handleSubmit = async () => {
       try {
         const formData = new FormData()
         formData.append('file', lyricsFileList.value[0].originFileObj)
-        const response = await http.post('/api/upload/lyrics', formData)
-        if (response.data.success) {
-          formState.lyrics = response.data.data.content
+        const response = await service.post('/api/upload/lyrics', formData)
+        if (response.success) {
+          formState.lyrics = response.data.content
         } else {
           throw new Error('歌词文件上传失败')
         }
@@ -538,9 +538,9 @@ const handleSubmit = async () => {
       ? `/api/admin/music/${props.musicId}`
       : '/api/admin/music'
     
-    const response = await http[props.musicId ? 'put' : 'post'](url, formState)
+    const response = await service[props.musicId ? 'put' : 'post'](url, formState)
     
-    if (response.data.success) {
+    if (response.success) {
       message.success(props.musicId ? '更新音乐成功' : '添加音乐成功')
       emit('success')
       emit('update:visible', false)
@@ -599,15 +599,15 @@ const searchArtists = async (keyword: string) => {
   
   artistsLoading.value = true
   try {
-    const response = await http.get('/api/admin/artists', {
+    const response = await service.get('/api/admin/artists', {
       params: { 
         page: 1, 
         limit: 100,
         keyword
       }
     })
-    if (response.data.success) {
-      artists.value = response.data.data.list
+    if (response.success) {
+      artists.value = response.data.list
     }
   } catch (error) {
     console.error('搜索艺人失败:', error)
@@ -625,7 +625,7 @@ const searchAlbums = async (keyword: string) => {
 
   albumsLoading.value = true
   try {
-    const response = await http.get('/api/albums', {
+    const response = await service.get('/api/albums', {
       params: { 
         page: 1, 
         limit: 100,
@@ -633,8 +633,8 @@ const searchAlbums = async (keyword: string) => {
         keyword
       }
     })
-    if (response.data.success) {
-      albums.value = response.data.data.albums
+    if (response.success) {
+      albums.value = response.data.albums
     }
   } catch (error) {
     console.error('搜索专辑失败:', error)

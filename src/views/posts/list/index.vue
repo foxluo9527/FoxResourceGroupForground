@@ -21,6 +21,7 @@
       row-key="id"
       @change="handleTableChange"
       :customRow="customRow"
+      :row-class-name="() => 'clickable-row'"
     >
       <template #tags="{ record }">
         <a-space wrap>
@@ -55,6 +56,7 @@
       :title="postDetail?.title"
       placement="right"
       width="600"
+      @close="handleDrawerClose"
     >
       <template #extra>
         <a-button type="link" @click="showComments">
@@ -305,11 +307,18 @@ const fetchPosts = async () => {
       keyword: queryParams.value.keyword,
       author_id: queryParams.value.author_id
     })
+    
     if (response.success) {
       posts.value = response.data.list
-      pagination.value.total = response.data.pagination.total
+      pagination.value = {
+        ...pagination.value,
+        total: response.data.total,
+        current: response.data.current,
+        pageSize: response.data.pageSize
+      }
     }
   } catch (error) {
+    console.error('获取帖子列表失败:', error)
     message.error('获取帖子列表失败')
   } finally {
     loading.value = false
@@ -360,22 +369,6 @@ const handleTableChange = (paginationConfig: any) => {
   fetchPosts()
 }
 
-const customRow = (record: any) => {
-  return {
-    onClick: async () => {
-      try {
-        const response = await getPostDetail(record.id)
-        if (response.success) {
-          postDetail.value = response.data
-          detailDrawerVisible.value = true
-        }
-      } catch (error) {
-        message.error('获取帖子详情失败')
-      }
-    }
-  }
-}
-
 const confirmDelete = (id: number) => {
   Modal.confirm({
     title: '确认删除',
@@ -395,7 +388,7 @@ const confirmDelete = (id: number) => {
 }
 
 const detailDrawerVisible = ref(false)
-const postDetail = ref<PostDetail | null>(null)
+const postDetail = ref(null)
 
 // 评论相关状态
 const commentsDrawerVisible = ref(false)
@@ -424,10 +417,13 @@ const fetchComments = async () => {
     })
     if (response.success) {
       comments.value = response.data.list
-      commentsPagination.value.total = response.data.pagination.total
+      commentsPagination.value.total = response.data.total
+      commentsPagination.value.current = response.data.current
+      commentsPagination.value.pageSize = response.data.pageSize
     }
   } catch (error) {
-    message.error('获取评论失败')
+    message.error('获取帖子评论失败:' + error.message)
+    console.error('获取评论失败:', error)
   } finally {
     commentsLoading.value = false
   }
@@ -549,6 +545,64 @@ const handleDeleteComment = (comment: PostComment | PostReply, isMainComment = t
     }
   })
 }
+
+// 获取帖子详情
+const fetchPostDetail = async (id: number) => {
+  try {
+    const response = await getPostDetail(id)
+    if (response.data) {
+      postDetail.value = response.data
+      detailDrawerVisible.value = true
+    }
+  } catch (error) {
+    console.error('获取帖子详情失败:', error)
+    message.error('获取帖子详情失败')
+  }
+}
+
+// 查看帖子详情
+const handleView = (record: any) => {
+  // 更新 URL
+  router.replace({
+    query: { ...route.query, postId: record.id }
+  })
+}
+
+// 监听路由参数变化
+watch(
+  () => route.query.postId,
+  (newPostId) => {
+    if (newPostId) {
+      fetchPostDetail(Number(newPostId))
+    } else {
+      detailDrawerVisible.value = false
+      postDetail.value = null
+    }
+  },
+  { immediate: true }
+)
+
+// 关闭抽屉时清除路由参数
+const handleDrawerClose = () => {
+  // 清除 URL 中的 postId 参数，保留其他参数
+  const query = { ...route.query }
+  delete query.postId
+  router.replace({ query })
+}
+
+// 表格行点击配置
+const customRow = (record: any) => {
+  return {
+    onClick: (event: MouseEvent) => {
+      const target = event.target as HTMLElement
+      // 如果点击的是按钮或链接，不触发详情打开
+      if (target.closest('.ant-btn') || target.closest('a')) {
+        return
+      }
+      handleView(record)
+    }
+  }
+}
 </script>
 
 <style scoped>
@@ -584,7 +638,6 @@ const handleDeleteComment = (comment: PostComment | PostReply, isMainComment = t
 
 .clickable-row {
   cursor: pointer;
-  transition: background-color 0.3s;
 }
 
 .clickable-row:hover {
@@ -682,4 +735,9 @@ const handleDeleteComment = (comment: PostComment | PostReply, isMainComment = t
 :deep(.replies-container .ant-btn-link) {
   font-size: 12px;
 }
+
+/* 移除单元格点击样式 */
+/* :deep(.ant-table-cell) {
+  cursor: pointer;
+} */
 </style> 

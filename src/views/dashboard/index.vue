@@ -167,7 +167,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { Badge, Button, message } from 'ant-design-vue'
 import { DownOutlined } from '@ant-design/icons-vue'
-import { http } from '@/utils/http'
+import { service } from '@/utils/request'
 import NotificationList from '@/components/NotificationList.vue'
 
 interface DashboardStats {
@@ -238,9 +238,9 @@ const showMore = ref(false)
 const fetchStats = async () => {
   loading.value = true
   try {
-    const response = await http.get('/api/admin/dashboard/stats')
-    if (response.data.success) {
-      stats.value = response.data.data
+    const response = await service.get('/api/admin/dashboard/stats')
+    if (response.success) {
+      stats.value = response.data
     }
   } catch (error) {
     message.error('获取统计数据失败')

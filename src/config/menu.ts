@@ -25,22 +25,22 @@ export const menuConfig = [
     children: [
       {
         key: 'songs',
-        title: '音乐',
+        title: '音乐列表',
         path: '/music/songs'
       },
       {
-        key: 'albums',
-        title: '专辑',
-        path: '/music/albums'
-      },
-      {
         key: 'artists',
-        title: '艺人',
+        title: '艺人管理',
         path: '/music/artists'
       },
       {
+        key: 'albums',
+        title: '专辑管理',
+        path: '/music/albums'
+      },
+      {
         key: 'comments',
-        title: '评论',
+        title: '评论管理',
         path: '/music/comments'
       }
     ]
@@ -86,5 +86,11 @@ export const menuConfig = [
     title: '标签管理',
     icon: TagsOutlined,
     path: '/tags'
+  },
+  {
+    key: 'report-management',
+    title: '举报管理',
+    icon: NotificationOutlined,
+    path: '/report-management'
   }
-] 
+]
