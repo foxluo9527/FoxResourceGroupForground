@@ -1,99 +1,107 @@
 <template>
   <a-layout class="layout">
     <notification-banner ref="notificationBannerRef" />
-    <a-layout-sider v-model:collapsed="collapsed" :trigger="null" collapsible>
-      <div class="logo">
-        <span v-show="!collapsed">Fox Admin</span>
-      </div>
-      <a-menu
-        v-model:selectedKeys="selectedKeys"
-        v-model:openKeys="openKeys"
-        mode="inline"
-        theme="dark"
-      >
-        <template v-for="item in menuConfig" :key="item.key">
-          <template v-if="item.children">
-            <a-sub-menu :key="item.key">
-              <template #title>
-                <component :is="item.icon" />
-                <span>{{ item.title }}</span>
-              </template>
-              <a-menu-item v-for="child in item.children" :key="child.key">
-                <router-link :to="child.path">{{ child.title }}</router-link>
-              </a-menu-item>
-            </a-sub-menu>
-          </template>
-          <template v-else>
-            <a-menu-item :key="item.key">
-              <router-link :to="item.path">
-                <component :is="item.icon" />
-                <span>{{ item.title }}</span>
-              </router-link>
-            </a-menu-item>
-          </template>
-        </template>
-      </a-menu>
-    </a-layout-sider>
     <a-layout>
-      <a-layout-header class="header">
-        <menu-unfold-outlined
-          v-if="collapsed"
-          class="trigger"
-          @click="() => (collapsed = !collapsed)"
-        />
-        <menu-fold-outlined
-          v-else
-          class="trigger"
-          @click="() => (collapsed = !collapsed)"
-        />
-        <div class="header-right">
-          <a-dropdown>
-            <div class="user-dropdown">
-              <a-avatar :src="userInfo?.avatar">
-                {{ userInfo?.nickname?.[0]?.toUpperCase() || userInfo?.username?.[0]?.toUpperCase() }}
-              </a-avatar>
-              <span class="username">{{ userInfo?.nickname || userInfo?.username }}</span>
-            </div>
-            <template #overlay>
-              <a-menu>
-                <a-menu-item key="profile" @click="goToProfile">
-                  <user-outlined />
-                  <span>个人主页</span>
-                </a-menu-item>
-                <a-menu-divider />
-                <a-menu-item key="logout" @click="handleLogout">
-                  <logout-outlined />
-                  <span>退出登录</span>
-                </a-menu-item>
-              </a-menu>
-            </template>
-          </a-dropdown>
+      <a-layout-sider v-model:collapsed="collapsed" :trigger="null" collapsible>
+        <div class="logo">
+          <span v-show="!collapsed">Fox Admin</span>
         </div>
-      </a-layout-header>
-      <a-layout-content class="content">
-        <a-tabs
-          v-model:activeKey="tabStore.activeTab"
-          type="editable-card"
-          hide-add
-          @edit="onTabEdit"
-          @change="handleTabChange"
-          class="main-tabs"
-        >
-          <a-tab-pane
-            v-for="tab in tabStore.tabs"
-            :key="tab.key"
-            :tab="tab.title"
-            :closable="tab.closable"
+        <div class="sider-menu-wrapper">
+          <a-menu
+            v-model:selectedKeys="selectedKeys"
+            v-model:openKeys="openKeys"
+            mode="inline"
+            theme="dark"
           >
-            <keep-alive>
-              <component 
-                :is="tab.key === tabStore.activeTab ? 'router-view' : null"
-                :key="tab.path"
-              />
-            </keep-alive>
-          </a-tab-pane>
-        </a-tabs>
-      </a-layout-content>
+            <template v-for="item in menuConfig" :key="item.key">
+              <template v-if="item.children">
+                <a-sub-menu :key="item.key">
+                  <template #title>
+                    <component :is="item.icon" />
+                    <span>{{ item.title }}</span>
+                  </template>
+                  <a-menu-item v-for="child in item.children" :key="child.key">
+                    <router-link :to="child.path">{{ child.title }}</router-link>
+                  </a-menu-item>
+                </a-sub-menu>
+              </template>
+              <template v-else>
+                <a-menu-item :key="item.key">
+                  <router-link :to="item.path">
+                    <component :is="item.icon" />
+                    <span>{{ item.title }}</span>
+                  </router-link>
+                </a-menu-item>
+              </template>
+            </template>
+          </a-menu>
+        </div>
+      </a-layout-sider>
+      
+      <a-layout>
+        <a-layout-header class="header">
+          <menu-unfold-outlined
+            v-if="collapsed"
+            class="trigger"
+            @click="() => (collapsed = !collapsed)"
+          />
+          <menu-fold-outlined
+            v-else
+            class="trigger"
+            @click="() => (collapsed = !collapsed)"
+          />
+          <div class="header-right">
+            <a-dropdown>
+              <div class="user-dropdown">
+                <a-avatar :src="userInfo?.avatar">
+                  {{ userInfo?.nickname?.[0]?.toUpperCase() || userInfo?.username?.[0]?.toUpperCase() }}
+                </a-avatar>
+                <span class="username">{{ userInfo?.nickname || userInfo?.username }}</span>
+              </div>
+              <template #overlay>
+                <a-menu>
+                  <a-menu-item key="profile" @click="goToProfile">
+                    <user-outlined />
+                    <span>个人主页</span>
+                  </a-menu-item>
+                  <a-menu-divider />
+                  <a-menu-item key="logout" @click="handleLogout">
+                    <logout-outlined />
+                    <span>退出登录</span>
+                  </a-menu-item>
+                </a-menu>
+              </template>
+            </a-dropdown>
+          </div>
+        </a-layout-header>
+        
+        <a-layout-content class="content">
+          <a-tabs
+            v-model:activeKey="tabStore.activeTab"
+            type="editable-card"
+            hide-add
+            @edit="onTabEdit"
+            @change="handleTabChange"
+            class="main-tabs"
+          >
+            <a-tab-pane
+              v-for="tab in tabStore.tabs"
+              :key="tab.key"
+              :tab="tab.title"
+              :closable="tab.closable"
+            >
+              <div class="tab-content-container">
+                <keep-alive>
+                  <component 
+                    :is="tab.key === tabStore.activeTab ? 'router-view' : null"
+                    :key="tab.path"
+                  />
+                </keep-alive>
+              </div>
+            </a-tab-pane>
+          </a-tabs>
+        </a-layout-content>
+      </a-layout>
     </a-layout>
   </a-layout>
 </template>
@@ -228,12 +236,97 @@ onMounted(() => {
   justify-content: center;
 }
 
+.sider-menu-wrapper {
+  height: calc(100vh - 64px);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* 左侧菜单滚动条样式 */
+.sider-menu-wrapper::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sider-menu-wrapper::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.sider-menu-wrapper::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.sider-menu-wrapper::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
 .header {
   background: #fff;
   padding: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  height: 64px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.content {
+  margin: 0;
+  padding: 0;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 64px);
+  overflow: hidden;
+}
+
+:deep(.main-tabs) {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+:deep(.ant-tabs-nav) {
+  margin: 0;
+  padding: 6px 16px 0;
+  background: #fff;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+:deep(.ant-tabs-content-holder) {
+  overflow-y: auto;
+  height: 100%;
+}
+
+:deep(.ant-tabs-content) {
+  height: 100%;
+}
+
+:deep(.ant-tabs-tabpane) {
+  height: 100%;
+  padding: 16px;
+}
+
+.tab-content-container {
+  min-height: 100%;
+}
+
+/* 美化滚动条 */
+:deep(.ant-tabs-content-holder)::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+:deep(.ant-tabs-content-holder)::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 3px;
+}
+
+:deep(.ant-tabs-content-holder)::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
 }
 
 .trigger {
@@ -257,42 +350,6 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
   cursor: pointer;
-}
-
-.content {
-  margin: 0;
-  padding: 0;
-  background: #fff;
-  min-height: 280px;
-  display: flex;
-  flex-direction: column;
-}
-
-:deep(.main-tabs) {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-:deep(.ant-tabs-nav) {
-  margin: 0;
-  padding: 6px 16px 0;
-  background: #fff;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-:deep(.ant-tabs-content) {
-  flex: 1;
-  height: 0;
-}
-
-:deep(.ant-tabs-content-holder) {
-  padding: 16px;
-  height: 100%;
-}
-
-:deep(.ant-tabs-tabpane) {
-  height: 100%;
 }
 
 .user-dropdown {

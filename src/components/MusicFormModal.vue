@@ -93,10 +93,9 @@
           <a-form-item label="音乐文件" name="url" required>
             <a-upload
               v-model:file-list="audioFileList"
-              :customRequest="handleAudioUpload"
               :before-upload="beforeAudioUpload"
-              accept=".mp3,.wav,.flac"
               :maxCount="1"
+              :auto-upload="false"
             >
               <a-button>
                 <upload-outlined />上传音乐
@@ -139,7 +138,6 @@
           <a-upload
             v-model:file-list="lyricsFileList"
             :customRequest="handleLyricsUpload"
-            :before-upload="beforeLyricsUpload"
             accept=".lrc,.txt"
             :maxCount="1"
           >
@@ -204,7 +202,6 @@ const lyricsInputType = ref<'manual' | 'file'>('manual')
 
 const audioFileList = ref<any[]>([])
 const imageFileList = ref<any[]>([])
-const lyricsFileList = ref<any[]>([])
 
 const formState = reactive({
   title: '',
@@ -222,7 +219,16 @@ const formState = reactive({
 
 const rules = {
   title: [{ required: true, message: '请输入音乐标题' }],
-  language: [{ required: true, message: '请选择语言' }]
+  language: [{ required: true, message: '请选择语言' }],
+  url: [{ 
+    validator: async (_rule: any, value: string) => {
+      // 如果有已上传的 URL 或者有选择的文件，都算通过验证
+      if (value || audioFileList.value.length > 0) {
+        return Promise.resolve();
+      }
+      return Promise.reject('请选择音乐文件');
+    }
+  }]
 }
 
 // 获取艺人列表
@@ -254,7 +260,7 @@ const fetchAlbums = async (artistId?: number) => {
       }
     })
     if (response.success) {
-      albums.value = response.data.albums
+      albums.value = response.data.list
     }
   } catch (error) {
     console.error('获取专辑列表失败:', error)
@@ -305,38 +311,19 @@ const getAudioDuration = (file: File): Promise<number> => {
   })
 }
 
-// 修改音频上传处理
-const handleAudioUpload = async (options: any) => {
-  try {
-    console.log('开始上传音频文件:', options.file)
-    
-    // 先获取音频时长
-    const duration = await getAudioDuration(options.file)
-    console.log('音频时长:', duration, '秒')
-    
-    const formData = new FormData()
-    formData.append('file', options.file)
-    const response = await service.post('/api/upload/audio', formData)
-    console.log('音频上传响应:', response)
-    
-    if (response.success) {
-      formState.url = response.data.url
-      formState.duration = duration // 设置时长
-      audioFileList.value = [{
-        uid: '1',
-        name: options.file.name,
-        status: 'done',
-        url: response.data.url
-      }]
-      options.onSuccess()
-    } else {
-      throw new Error(response.data.message || '上传失败')
-    }
-  } catch (error) {
-    console.error('上传音频失败:', error)
-    message.error('上传音频失败')
-    options.onError()
+// 音频文件上传前的验证
+const beforeAudioUpload = (file: File) => {
+  const isAudio = file.type.startsWith('audio/')
+  if (!isAudio) {
+    message.error('只能上传音频文件！')
+    return Upload.LIST_IGNORE
   }
+  const isLt100M = file.size / 1024 / 1024 < 100
+  if (!isLt100M) {
+    message.error('音频文件大小不能超过 100MB！')
+    return Upload.LIST_IGNORE
+  }
+  return false  // 返回 false 阻止自动上传
 }
 
 const handleImageUpload = async (options: any) => {
@@ -356,31 +343,12 @@ const handleLyricsUpload = async (options: any) => {
   const reader = new FileReader()
   reader.onload = (e) => {
     formState.lyrics = e.target?.result as string
-    lyricsFileList.value = [{
-      uid: '1',
-      name: file.name,
-      status: 'done',
-      originFileObj: file
-    }]
     options.onSuccess()
   }
   reader.onerror = () => {
     options.onError()
   }
   reader.readAsText(file)
-}
-
-// 文件上传前的验证
-const beforeAudioUpload: UploadProps['beforeUpload'] = (file) => {
-  const isAudio = /\.(mp3|wav|flac)$/.test(file.name.toLowerCase())
-  if (!isAudio) {
-    message.error('只能上传音频文件!')
-  }
-  const isLt100M = file.size / 1024 / 1024 < 100
-  if (!isLt100M) {
-    message.error('文件必须小于 100MB!')
-  }
-  return isAudio && isLt100M
 }
 
 const beforeImageUpload: UploadProps['beforeUpload'] = (file) => {
@@ -400,7 +368,7 @@ const beforeImageUpload: UploadProps['beforeUpload'] = (file) => {
 const beforeLyricsUpload: UploadProps['beforeUpload'] = (file) => {
   const isText = /\.(lrc|txt)$/.test(file.name.toLowerCase())
   if (!isText) {
-    message.error('只能上传 LRC 或 TXT 文件!')
+    message.error('只能选择 LRC 或 TXT 文件!')
   }
   const isLt1M = file.size / 1024 / 1024 < 1
   if (!isLt1M) {
@@ -475,7 +443,6 @@ watch(() => props.visible, (newVal) => {
       formState.tags = []
       audioFileList.value = []
       imageFileList.value = []
-      lyricsFileList.value = []
       lyricsInputType.value = 'manual'
       albums.value = [] // 清空专辑列表
       // 加载艺人和标签列表
@@ -489,14 +456,25 @@ watch(() => props.visible, (newVal) => {
 // 修改表单提交
 const handleSubmit = async () => {
   try {
-    await formRef.value?.validate()
-    
-    if (!formState.url && audioFileList.value.length === 0) {
-      message.error('请上传音乐文件')
-      return
+    // 先上传文件，再验证表单
+    if (audioFileList.value.length > 0 && audioFileList.value[0].originFileObj) {
+      try {
+        const formData = new FormData()
+        formData.append('file', audioFileList.value[0].originFileObj)
+        const response = await service.post('/api/upload/audio', formData)
+        if (response.success) {
+          formState.url = response.data.url
+        } else {
+          throw new Error('音乐文件上传失败')
+        }
+      } catch (error) {
+        console.error('上传音乐文件失败:', error)
+        message.error('上传音乐文件失败')
+        return
+      }
     }
 
-    // 上传图片文件（如果有新的图片）
+    // 上传封面图片（如果有新图片）
     if (imageFileList.value.length > 0 && imageFileList.value[0].originFileObj) {
       try {
         const formData = new FormData()
@@ -505,35 +483,19 @@ const handleSubmit = async () => {
         if (response.success) {
           formState.cover_image = response.data.url
         } else {
-          throw new Error('图片上传失败')
+          throw new Error('封面图片上传失败')
         }
       } catch (error) {
-        console.error('上传图片失败:', error)
-        message.error('上传图片失败')
+        console.error('上传封面图片失败:', error)
+        message.error('上传封面图片失败')
         return
       }
     }
 
-    // 上传歌词文件（如果选择了文件上传方式）
-    if (lyricsInputType.value === 'file' && lyricsFileList.value.length > 0) {
-      try {
-        const formData = new FormData()
-        formData.append('file', lyricsFileList.value[0].originFileObj)
-        const response = await service.post('/api/upload/lyrics', formData)
-        if (response.success) {
-          formState.lyrics = response.data.content
-        } else {
-          throw new Error('歌词文件上传失败')
-        }
-      } catch (error) {
-        console.error('上传歌词失败:', error)
-        message.error('上传歌词失败')
-        return
-      }
-    }
+    // 文件上传完成后再验证表单
+    await formRef.value?.validate()
 
     // 提交表单数据
-    console.log('提交的表单数据:', formState)
     const url = props.musicId 
       ? `/api/admin/music/${props.musicId}`
       : '/api/admin/music'
@@ -545,11 +507,11 @@ const handleSubmit = async () => {
       emit('success')
       emit('update:visible', false)
     } else {
-      message.error(response.data.message || '操作失败')
+      message.error(response.message || '操作失败')
     }
   } catch (error: any) {
     console.error('提交表单失败:', error)
-    message.error(error.response?.data?.message || error.message || '提交失败')
+    message.error(error.message || '提交失败')
   }
 }
 
@@ -559,7 +521,6 @@ const handleCancel = () => {
   formState.cover_image = ''
   audioFileList.value = []
   imageFileList.value = []
-  lyricsFileList.value = []
   lyricsInputType.value = 'manual'
   // 清空所有选项
   formState.artist_id = undefined

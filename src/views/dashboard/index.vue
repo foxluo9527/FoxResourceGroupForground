@@ -265,6 +265,7 @@ onMounted(() => {
 
 <style scoped>
 .dashboard {
+  min-height: 100%;
   padding: 24px;
 }
 
