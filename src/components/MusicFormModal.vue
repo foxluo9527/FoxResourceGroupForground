@@ -51,9 +51,16 @@
                 label: artist.name
               }))"
               :filter-option="false"
-              :not-found-content="artistsLoading ? undefined : null"
               @search="handleArtistSearch"
-            />
+              @change="handleArtistChange"
+              style="width: 100%"
+              :default-value="formState.artist_id"
+            >
+              <template #notFoundContent>
+                <span v-if="artistsLoading">搜索中...</span>
+                <span v-else>未找到相关艺人</span>
+              </template>
+            </a-select>
           </a-form-item>
         </a-col>
         <a-col :span="12">
@@ -61,16 +68,20 @@
             <a-select
               v-model:value="formState.album_id"
               placeholder="请选择专辑"
-              :loading="albumsLoading"
               show-search
-              :options="albums.map(album => ({
-                value: album.id,
-                label: album.title
-              }))"
+              :loading="albumsLoading"
+              :options="albums"
               :filter-option="false"
-              :not-found-content="albumsLoading ? undefined : null"
               @search="handleAlbumSearch"
-            />
+              @change="handleAlbumChange"
+              style="width: 100%"
+              :default-value="formState.album_id"
+            >
+              <template #notFoundContent>
+                <span v-if="albumsLoading">搜索中...</span>
+                <span v-else>未找到相关专辑</span>
+              </template>
+            </a-select>
           </a-form-item>
         </a-col>
       </a-row>
@@ -160,7 +171,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch, defineProps, defineEmits } from 'vue'
+import { ref, reactive, watch, defineProps, defineEmits, nextTick } from 'vue'
 import { message } from 'ant-design-vue'
 import { PlusOutlined, UploadOutlined } from '@ant-design/icons-vue'
 import type { UploadProps } from 'ant-design-vue'
@@ -171,6 +182,7 @@ interface Props {
   visible: boolean
   title?: string
   musicId?: number
+  music?: any
 }
 
 interface Artist {
@@ -193,7 +205,7 @@ const emit = defineEmits(['update:visible', 'success'])
 
 const formRef = ref<FormInstance>()
 const artists = ref<Artist[]>([])
-const albums = ref<Album[]>([])
+const albums = ref<{ label: string; value: number }[]>([])
 const tags = ref<Tag[]>([])
 const artistsLoading = ref(false)
 const albumsLoading = ref(false)
@@ -249,21 +261,28 @@ const fetchArtists = async () => {
 }
 
 // 获取专辑列表
-const fetchAlbums = async (artistId?: number) => {
+const fetchAlbums = async (artistId: number) => {
+  if (!artistId) return
+
   albumsLoading.value = true
   try {
-    const response = await service.get('/api/albums', {
+    const response = await service.get('/api/admin/albums', {
       params: { 
         page: 1, 
         limit: 100,
-        artist_id: artistId
+        artistId
       }
     })
-    if (response.success) {
-      albums.value = response.data.list
+    if (response.success && response.data?.list) {
+      // 更新专辑列表
+      albums.value = response.data.list.map(album => ({
+        label: album.title,
+        value: album.id
+      }))
     }
   } catch (error) {
     console.error('获取专辑列表失败:', error)
+    message.error('获取专辑列表失败')
   } finally {
     albumsLoading.value = false
   }
@@ -383,16 +402,17 @@ const fetchMusicDetail = async (id: number) => {
     const response = await service.get(`/api/admin/music/${id}`)
     if (response.success) {
       const music = response.data
-      // 填充表单数据
+
+      // 填充基本表单数据
       formState.title = music.title
-      formState.description = music.description
-      formState.url = music.url
-      formState.cover_image = music.cover_image
-      formState.language = music.language
-      formState.lyrics = music.lyrics
-      formState.artist_id = music.artists?.id
-      formState.tags = music.tags.map(tag => tag.name)
-      formState.duration = music.duration
+      formState.description = music.description || ''
+      formState.url = music.url || ''
+      formState.cover_image = music.cover_image || ''
+      formState.genre = music.genre || '流行'
+      formState.language = music.language || '中文'
+      formState.lyrics = music.lyrics || ''
+      formState.duration = music.duration || 0
+      formState.tags = music.tags?.map(tag => tag.name) || []
 
       // 设置文件列表
       if (music.url) {
@@ -403,6 +423,7 @@ const fetchMusicDetail = async (id: number) => {
           url: music.url
         }]
       }
+
       if (music.cover_image) {
         imageFileList.value = [{
           uid: '1',
@@ -410,15 +431,37 @@ const fetchMusicDetail = async (id: number) => {
           status: 'done',
           url: music.cover_image
         }]
-        formState.cover_image = music.cover_image
       }
 
-      // 如果有艺人ID，先加载艺人信息，然后加载对应的专辑列表
-      if (music.artists?.id) {
-        await fetchArtists() // 确保艺人列表已加载
-        await fetchAlbums(music.artists.id) // 加载该艺人的专辑列表
-        // 设置专辑ID
-        formState.album_id = music.albums?.[0]?.id
+      // 处理艺人信息
+      if (music.artist) {
+        // 设置艺人ID
+        formState.artist_id = music.artist.id
+        
+        // 确保艺人在列表中
+        if (!artists.value.find(a => a.id === music.artist.id)) {
+          artists.value = [...artists.value, {
+            id: music.artist.id,
+            name: music.artist.name
+          }]
+        }
+
+        // 获取并设置专辑列表
+        await fetchAlbums(music.artist.id)
+
+        // 处理专辑信息
+        if (music.album) {
+          // 设置专辑ID
+          formState.album_id = music.album.id
+          
+          // 确保专辑在列表中
+          if (!albums.value.find(a => a.value === music.album.id)) {
+            albums.value = [...albums.value, {
+              label: music.album.title,
+              value: music.album.id
+            }]
+          }
+        }
       }
     }
   } catch (error) {
@@ -428,30 +471,64 @@ const fetchMusicDetail = async (id: number) => {
 }
 
 // 监听 visible 变化
-watch(() => props.visible, (newVal) => {
+watch(() => props.visible, async (newVal) => {
   if (newVal) {
-    if (props.musicId) {
-      // 编辑模式：获取详情
-      fetchMusicDetail(props.musicId)
+    // 加载艺人列表和标签
+    await fetchArtists()
+    await fetchTags()
+
+    // 如果是编辑模式
+    if (props.music && props.music.artist) {
+      // 设置艺人信息
+      formState.artist_id = props.music.artist.id
+      
+      // 如果艺人不在列表中，添加到列表
+      if (!artists.value.find(a => a.id === props.music.artist.id)) {
+        artists.value.push({
+          id: props.music.artist.id,
+          name: props.music.artist.name
+        })
+      }
+
+      // 先获取该艺人的专辑列表
+      await fetchAlbums(props.music.artist.id)
+
+      // 等专辑列表加载完成后，再设置专辑ID
+      if (props.music.album) {
+        // 延迟一帧设置专辑ID，确保专辑列表已经渲染
+        nextTick(() => {
+          formState.album_id = props.music.album.id
+        })
+      }
+    } else if (props.musicId) {
+      // 如果是通过 ID 编辑，获取详情
+      await fetchMusicDetail(props.musicId)
     } else {
-      // 新增模式：只初始化必要的数据
+      // 新增模式：重置表单
       formRef.value?.resetFields()
-      formState.url = ''
-      formState.cover_image = ''
-      formState.artist_id = undefined
-      formState.album_id = undefined
-      formState.tags = []
-      audioFileList.value = []
-      imageFileList.value = []
-      lyricsInputType.value = 'manual'
-      albums.value = [] // 清空专辑列表
-      // 加载艺人和标签列表
-      fetchArtists()
-      fetchTags()
-      formState.duration = 0
+      resetFormState()
     }
   }
 })
+
+// 添加重置表单状态的函数
+const resetFormState = () => {
+  formState.title = ''
+  formState.description = ''
+  formState.url = ''
+  formState.cover_image = ''
+  formState.genre = '流行'
+  formState.language = '中文'
+  formState.lyrics = ''
+  formState.artist_id = undefined
+  formState.album_id = undefined
+  formState.tags = []
+  formState.duration = 0
+  audioFileList.value = []
+  imageFileList.value = []
+  lyricsInputType.value = 'manual'
+  albums.value = []
+}
 
 // 修改表单提交
 const handleSubmit = async () => {
@@ -496,11 +573,17 @@ const handleSubmit = async () => {
     await formRef.value?.validate()
 
     // 提交表单数据
+    const submitData = {
+      ...formState,
+      artist_id: formState.artist_id,  // 确保包含艺人ID
+      album_id: formState.album_id     // 确保包含专辑ID
+    }
+
     const url = props.musicId 
       ? `/api/admin/music/${props.musicId}`
       : '/api/admin/music'
     
-    const response = await service[props.musicId ? 'put' : 'post'](url, formState)
+    const response = await service[props.musicId ? 'put' : 'post'](url, submitData)
     
     if (response.success) {
       message.success(props.musicId ? '更新音乐成功' : '添加音乐成功')
@@ -517,28 +600,27 @@ const handleSubmit = async () => {
 
 const handleCancel = () => {
   formRef.value?.resetFields()
-  formState.url = ''
-  formState.cover_image = ''
-  audioFileList.value = []
-  imageFileList.value = []
-  lyricsInputType.value = 'manual'
-  // 清空所有选项
-  formState.artist_id = undefined
-  formState.album_id = undefined
-  formState.tags = []
-  albums.value = [] // 清空专辑列表
-  formState.duration = 0
+  resetFormState()
   emit('update:visible', false)
 }
 
-// 监听艺人变化，加载对应的专辑
-watch(() => formState.artist_id, (newVal) => {
-  if (newVal) {
-    fetchAlbums(newVal)
-  } else {
-    albums.value = []
+// 修改艺人变化处理函数
+const handleArtistChange = async (value: number) => {
+  // 清空专辑相关数据
+  formState.album_id = undefined
+  albums.value = []
+
+  if (value) {
+    formState.artist_id = value
+    // 获取该艺人的专辑列表
+    await fetchAlbums(value)
   }
-})
+}
+
+// 修改专辑变化处理函数
+const handleAlbumChange = (value: number) => {
+  formState.album_id = value
+}
 
 // 搜索防抖
 const useDebounce = (fn: Function, delay: number) => {
@@ -578,27 +660,32 @@ const searchArtists = async (keyword: string) => {
 }
 
 // 搜索专辑
-const searchAlbums = async (keyword: string) => {
-  if (!keyword) {
-    fetchAlbums(formState.artist_id)
+const handleAlbumSearch = async (keyword: string) => {
+  if (!formState.artist_id) {
+    message.warning('请先选择艺人')
     return
   }
 
   albumsLoading.value = true
   try {
-    const response = await service.get('/api/albums', {
-      params: { 
-        page: 1, 
-        limit: 100,
-        artist_id: formState.artist_id,
-        keyword
+    const response = await service.get('/api/admin/albums', {
+      params: {
+        title: keyword,
+        artistId: formState.artist_id,
+        page: 1,
+        limit: 20
       }
     })
-    if (response.success) {
-      albums.value = response.data.albums
+    
+    if (response.success && response.data?.list) {
+      albums.value = response.data.list.map(item => ({
+        label: item.title,
+        value: item.id
+      }))
     }
   } catch (error) {
     console.error('搜索专辑失败:', error)
+    message.error('搜索专辑失败')
   } finally {
     albumsLoading.value = false
   }
@@ -607,10 +694,6 @@ const searchAlbums = async (keyword: string) => {
 // 使用防抖处理搜索
 const handleArtistSearch = useDebounce((value: string) => {
   searchArtists(value)
-}, 300)
-
-const handleAlbumSearch = useDebounce((value: string) => {
-  searchAlbums(value)
 }, 300)
 </script>
 

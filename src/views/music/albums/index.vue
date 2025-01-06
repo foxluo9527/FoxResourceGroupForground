@@ -18,7 +18,7 @@
           @search="handleSearch"
           allowClear
         />
-        <a-button type="primary" @click="handleAdd">
+        <a-button type="primary" @click="showAddModal">
           <plus-outlined />添加专辑
         </a-button>
       </a-space>
@@ -38,23 +38,20 @@
       row-key="id"
       :customRow="customRow"
       :row-class-name="() => 'clickable-row'"
+      @row-click="handleRowClick"
     >
       <!-- 封面 -->
-      <template #coverImage="{ record }">
-        <template v-if="record.cover_image">
-          <div @click.stop>
-            <a-image
-              :width="80"
-              :src="record.cover_image"
-              :fallback="defaultCover"
-            />
-          </div>
-        </template>
-        <template v-else>
-          <div class="empty-cover">
-            <picture-outlined />
-          </div>
-        </template>
+      <template #cover="{ record }">
+        <a-image
+          :src="record.cover_image || DEFAULT_COVER"
+          :width="60"
+          :height="60"
+          style="object-fit: cover; border-radius: 4px;"
+          :preview="{
+            src: record.cover_image || DEFAULT_COVER,
+            mask: false
+          }"
+        />
       </template>
 
       <!-- 艺人 -->
@@ -72,13 +69,12 @@
 
       <!-- 操作 -->
       <template #action="{ record }">
-        <a-space>
-          <a @click.stop="handleEdit(record)">编辑</a>
+        <a-space @click.stop>
+          <a @click="() => handleEdit(record)">编辑</a>
           <a-divider type="vertical" />
           <a-popconfirm
             title="确定要删除这个专辑吗？"
-            @confirm="handleDelete(record)"
-            @click.stop
+            @confirm="() => handleDelete(record.id)"
           >
             <a class="danger">删除</a>
           </a-popconfirm>
@@ -188,11 +184,108 @@
       :music-id="currentMusicId"
       @album-click="handleAlbumClick"
     />
+
+    <!-- 添加/编辑专辑弹窗 -->
+    <a-modal
+      v-model:visible="modalVisible"
+      :title="editingAlbum ? '编辑专辑' : '添加专辑'"
+      @ok="handleSubmit"
+      :confirmLoading="submitting"
+      width="800px"
+    >
+      <a-form
+        ref="formRef"
+        :model="formState"
+        :rules="rules"
+        layout="vertical"
+      >
+        <a-row :gutter="16">
+          <a-col :span="12">
+            <a-form-item label="专辑名称" name="title">
+              <a-input v-model:value="formState.title" placeholder="请输入专辑名称" />
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="艺人" name="artistId">
+              <a-select
+                v-model:value="formState.artistId"
+                placeholder="请选择艺人"
+                show-search
+                :loading="artistsLoading"
+                :options="artists"
+                :filter-option="false"
+                @search="handleArtistSearch"
+                @focus="() => handleArtistSearch('')"
+                style="width: 100%"
+              >
+                <template #notFoundContent>
+                  <span v-if="artistsLoading">搜索中...</span>
+                  <span v-else>未找到相关艺人</span>
+                </template>
+              </a-select>
+            </a-form-item>
+          </a-col>
+        </a-row>
+
+        <a-row :gutter="16">
+          <a-col :span="12">
+            <a-form-item label="发行日期" name="release_date">
+              <a-date-picker 
+                v-model:value="formState.release_date"
+                style="width: 100%"
+                :show-time="false"
+                format="YYYY-MM-DD"
+              />
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="语言" name="language">
+              <a-select v-model:value="formState.language">
+                <a-select-option value="中文">中文</a-select-option>
+                <a-select-option value="英文">英文</a-select-option>
+                <a-select-option value="日文">日文</a-select-option>
+                <a-select-option value="韩文">韩文</a-select-option>
+                <a-select-option value="粤语">粤语</a-select-option>
+                <a-select-option value="其他">其他</a-select-option>
+              </a-select>
+            </a-form-item>
+          </a-col>
+        </a-row>
+
+        <a-form-item label="发行公司" name="publisher">
+          <a-input v-model:value="formState.publisher" placeholder="请输入发行公司" />
+        </a-form-item>
+
+        <a-form-item label="专辑描述" name="description">
+          <a-textarea 
+            v-model:value="formState.description" 
+            :rows="4" 
+            placeholder="请输入专辑描述"
+          />
+        </a-form-item>
+
+        <a-form-item label="封面" name="cover_image">
+          <a-upload
+            v-model:file-list="formState.fileList"
+            list-type="picture-card"
+            :show-upload-list="false"
+            :before-upload="beforeUploadCover"
+            @change="handleCoverChange"
+          >
+            <img v-if="formState.cover_preview" :src="formState.cover_preview" style="width: 100%" />
+            <div v-else>
+              <plus-outlined />
+              <div style="margin-top: 8px">上传封面</div>
+            </div>
+          </a-upload>
+        </a-form-item>
+      </a-form>
+    </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, watch } from 'vue'
+import { ref, reactive, computed, watch, onMounted, onUnmounted } from 'vue'
 import { 
   PlusOutlined, 
   PictureOutlined, 
@@ -206,90 +299,17 @@ import defaultCover from '@/assets/default-cover.png'
 import dayjs from 'dayjs'
 import MusicDetailDrawer from '@/components/MusicDetailDrawer.vue'
 import { useRouter, useRoute } from 'vue-router'
+import type { FormInstance } from 'ant-design-vue'
+import { useDebounceFn } from '@vueuse/core'
 
-const columns = [
-  {
-    title: '封面',
-    dataIndex: 'cover_image',
-    width: 100,
-    slots: { customRender: 'coverImage' }
-  },
-  {
-    title: '标题',
-    dataIndex: 'title',
-    width: 200,
-    customRender: ({ text }) => text || '-'
-  },
-  {
-    title: '艺人',
-    dataIndex: 'artist',
-    slots: { customRender: 'artist' }
-  },
-  {
-    title: '类型',
-    dataIndex: 'type',
-    width: 100,
-    customRender: ({ text }) => text === 'album' ? '专辑' : '歌单'
-  },
-  {
-    title: '语言',
-    dataIndex: 'language',
-    width: 100,
-    customRender: ({ text }) => text || '-'
-  },
-  {
-    title: '发行日期',
-    dataIndex: 'release_date',
-    width: 120,
-    customRender: ({ text }) => text ? dayjs(text).format('YYYY-MM-DD') : '-'
-  },
-  {
-    title: '收录歌曲',
-    dataIndex: 'track_count',
-    width: 100,
-    customRender: ({ text }) => `${text || 0} 首`
-  },
-  {
-    title: '播放次数',
-    dataIndex: 'view_count',
-    width: 100,
-    customRender: ({ text }) => text || '-'
-  },
-  {
-    title: '收藏次数',
-    dataIndex: 'collection_count',
-    width: 100,
-    customRender: ({ text }) => text || '-'
-  },
-  {
-    title: '操作',
-    key: 'action',
-    width: 200,
-    slots: { customRender: 'action' }
-  }
-]
-
-const trackColumns = [
-  {
-    title: '标题',
-    dataIndex: 'title'
-  },
-  {
-    title: '时长',
-    dataIndex: 'duration',
-    width: 100,
-    slots: { customRender: 'duration' }
-  }
-]
-
+const albums = ref<any[]>([])
 const loading = ref(false)
-const albums = ref([])
-const searchKeyword = ref('')
-const pagination = ref<TablePaginationConfig>({
-  total: 0,
+const pagination = reactive({
   current: 1,
-  pageSize: 10
+  pageSize: 10,
+  total: 0
 })
+const searchKeyword = ref('')
 
 const queryParams = reactive({
   title: '',
@@ -311,22 +331,21 @@ const formatDuration = (seconds: number) => {
 const fetchAlbums = async () => {
   loading.value = true
   try {
-    const response = await service.get('/api/admin/albums', {
-      params: {
-        page: pagination.value.current,
-        limit: pagination.value.pageSize,
-        type: queryParams.type,
-        keyword: searchKeyword.value
-      }
-    })
+    // 构建查询参数
+    const params = {
+      page: pagination.current,
+      limit: pagination.pageSize,
+      type: queryParams.type,
+      title: searchKeyword.value
+    }
+    // 发起请求
+    const response = await service.get('/api/admin/albums', { params })
+    
     if (response.success) {
       albums.value = response.data.list
-      pagination.value = {
-        ...pagination.value,
-        total: response.data.total,
-        current: response.data.current,
-        pageSize: response.data.pageSize
-      }
+      pagination.total = response.data.total
+      pagination.current = response.data.current
+      pagination.pageSize = response.data.size
     }
   } catch (error) {
     console.error('获取专辑列表失败:', error)
@@ -349,24 +368,36 @@ const fetchAlbumDetail = async (id: number) => {
   }
 }
 
-// 处理表格分页变化
-const handleTableChange = (pag: TablePaginationConfig) => {
-  pagination.value.current = pag.current
-  pagination.value.pageSize = pag.pageSize
+// 处理表格变化（分页、排序等）
+const handleTableChange = (pag: any) => {
+  pagination.current = pag.current
+  pagination.pageSize = pag.pageSize
   fetchAlbums()
 }
 
 // 处理搜索
-const handleSearch = () => {
-  pagination.value.current = 1
+const handleSearch = (value?: string) => {
+  if (value !== undefined) {
+    searchKeyword.value = value
+  }
+  pagination.current = 1  // 重置到第一页
   fetchAlbums()
 }
 
-// 处理筛选
-const handleFilter = () => {
-  pagination.value.current = 1
+// 使用防抖处理搜索关键词变化
+const debouncedSearch = useDebounceFn(() => {
+  handleSearch()
+}, { delay: 300 })
+
+// 监听搜索关键词变化
+watch(searchKeyword, () => {
+  debouncedSearch()
+})
+
+// 组件挂载时获取数据
+onMounted(() => {
   fetchAlbums()
-}
+})
 
 // 查看详情
 const handleView = async (record: any) => {
@@ -391,9 +422,51 @@ const handleAdd = () => {
 }
 
 // 编辑专辑
-const handleEdit = (record: any) => {
-  // TODO: 实现编辑专辑功能
-  message.info('编辑专辑功能开发中')
+const handleEdit = async (record: any) => {
+  editingAlbum.value = record
+  
+  try {
+    // 获取艺人详情
+    const artistId = record.artist.id
+    console.log('artistId', artistId)
+    if (artistId) {
+      const artistResponse = await service.get(`/api/admin/artists/${artistId}`)
+      if (artistResponse.success) {
+        // 将艺人信息添加到选项列表中
+        const artist = artistResponse.data
+        artists.value = [{
+          label: artist.name,
+          value: artist.id
+        }]
+        // 设置选中的艺人ID
+        formState.artistId = artist.id  // 直接使用艺人ID
+      }
+    }
+    console.log('artists', artists.value)
+
+    // 填充其他表单数据
+    formState.title = record.title
+    formState.description = record.description
+    formState.release_date = record.release_date ? dayjs(record.release_date) : undefined
+    formState.cover_image = record.cover_image
+    formState.cover_preview = record.cover_image
+    formState.language = record.language || '中文'
+    formState.publisher = record.publisher
+    formState.fileList = record.cover_image ? [
+      {
+        uid: '-1',
+        name: 'cover.jpg',
+        status: 'done',
+        url: record.cover_image
+      }
+    ] : []
+
+    // 打开弹窗
+    modalVisible.value = true
+  } catch (error) {
+    console.error('获取艺人详情失败:', error)
+    message.error('获取艺人详情失败')
+  }
 }
 
 // 删除专辑
@@ -402,8 +475,8 @@ const handleDelete = async (record: any) => {
     const response = await service.delete(`/api/admin/albums/${record.id}`)
     if (response.success) {
       message.success('删除成功')
-      if (albums.value.length === 1 && pagination.value.current > 1) {
-        pagination.value.current--
+      if (albums.value.length === 1 && pagination.current > 1) {
+        pagination.current--
       }
       fetchAlbums()
     }
@@ -538,8 +611,11 @@ watch(
   { immediate: true }
 )
 
-// 初始加载
-fetchAlbums()
+// 处理筛选
+const handleFilter = () => {
+  pagination.current = 1
+  fetchAlbums()
+}
 
 // 处理艺人点击
 const handleArtistClick = (artist: any) => {
@@ -551,6 +627,287 @@ const handleArtistClick = (artist: any) => {
     replace: true
   })
 }
+
+// 添加表单引用
+const formRef = ref<FormInstance>()
+
+// 修改表单状态接口
+interface FormState {
+  title: string
+  artistId?: number
+  description?: string
+  release_date?: any
+  cover_image?: string      // 当前/原有的封面URL
+  cover_preview?: string    // 预览图片URL（可以是本地预览或远程URL）
+  language: string
+  publisher?: string
+  fileList: any[]
+  newCoverFile?: File      // 新选择的封面文件
+}
+
+// 修改表单初始状态
+const formState = reactive<FormState>({
+  title: '',
+  artistId: undefined,
+  description: '',
+  release_date: undefined,
+  cover_image: undefined,
+  cover_preview: undefined,
+  language: '中文',
+  publisher: '',
+  fileList: [],
+  newCoverFile: undefined
+})
+
+// 标签选项
+const tags = ref<{ label: string; value: number }[]>([])
+const tagsLoading = ref(false)
+
+// 获取标签列表
+const fetchTags = async () => {
+  tagsLoading.value = true
+  try {
+    const response = await service.get('/api/admin/tags', {
+      params: { type: 'album' }
+    })
+    if (response.success && response.data?.list) {
+      tags.value = response.data.list.map(tag => ({
+        label: tag.name,
+        value: tag.id
+      }))
+    } else {
+      tags.value = []
+    }
+  } catch (error) {
+    console.error('获取标签列表失败:', error)
+    tags.value = []
+  } finally {
+    tagsLoading.value = false
+  }
+}
+
+// 表单验证规则
+const rules = {
+  title: [{ required: true, message: '请输入专辑名称' }],
+  artistId: [{ required: true, message: '请选择艺人' }],
+  language: [{ required: true, message: '请选择语言' }]
+}
+
+const modalVisible = ref(false)
+const submitting = ref(false)
+const editingAlbum = ref<any>(null)
+const artists = ref<{ label: string, value: number }[]>([])
+const artistsLoading = ref(false)
+
+// 显示添加弹窗
+const showAddModal = async () => {
+  editingAlbum.value = null
+  resetForm()
+  modalVisible.value = true
+  // 加载初始艺术家列表
+  await handleArtistSearch('')
+}
+
+// 重置表单
+const resetForm = () => {
+  formState.title = ''
+  formState.artistId = undefined
+  formState.description = ''
+  formState.release_date = undefined
+  formState.cover_image = undefined
+  formState.cover_preview = undefined
+  formState.language = '中文'
+  formState.publisher = ''
+  formState.fileList = []
+}
+
+// 搜索艺人
+const handleArtistSearch = async (keyword: string) => {
+  artistsLoading.value = true
+  try {
+    const response = await service.get('/api/admin/artists', {
+      params: { 
+        keyword: keyword.trim(),  // 处理搜索关键词
+        page: 1,
+        limit: 20,
+        order_by: 'name',  // 按名称排序
+        order: 'asc'       // 升序排列
+      }
+    })
+    if (response.success) {
+      artists.value = response.data.list.map(item => ({
+        label: item.name,
+        value: item.id
+      }))
+    }
+  } catch (error) {
+    console.error('搜索艺人失败:', error)
+    message.error('搜索艺人失败')
+  } finally {
+    artistsLoading.value = false
+  }
+}
+
+// 处理封面上传前的验证和预览
+const beforeUploadCover = (file: File) => {
+  const isImage = file.type.startsWith('image/')
+  if (!isImage) {
+    message.error('只能上传图片文件!')
+    return false
+  }
+  const isLt2M = file.size / 1024 / 1024 < 2
+  if (!isLt2M) {
+    message.error('图片必须小于 2MB!')
+    return false
+  }
+
+  // 创建本地预览
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    formState.cover_preview = e.target?.result as string
+  }
+  reader.readAsDataURL(file)
+
+  // 保存文件以供后续上传
+  formState.newCoverFile = file
+  formState.fileList = [{
+    uid: '-1',
+    name: file.name,
+    status: 'done',
+    originFileObj: file
+  }]
+
+  // 返回 false 阻止自动上传
+  return false
+}
+
+// 处理封面变化
+const handleCoverChange = (info: any) => {
+  // 只在文件被移除时处理
+  if (info.file.status === 'removed') {
+    handleRemoveCover()
+  }
+}
+
+// 移除封面
+const handleRemoveCover = () => {
+  formState.cover_image = undefined
+  formState.cover_preview = undefined
+  formState.newCoverFile = undefined
+  formState.fileList = []
+}
+
+// 修改提交表单函数
+const handleSubmit = async () => {
+  try {
+    await formRef.value?.validate()
+    
+    submitting.value = true
+    
+    // 1. 如果有新选择的封面文件，先上传
+    let coverUrl = formState.cover_image // 保留原有封面
+    if (formState.newCoverFile) {
+      const formData = new FormData()
+      formData.append('file', formState.newCoverFile)
+      const uploadResponse = await service.post('/api/upload/image', formData)
+      if (uploadResponse.success) {
+        coverUrl = uploadResponse.data.url
+      }
+    }
+
+    // 2. 创建/更新专辑
+    const albumData = {
+      title: formState.title,
+      artistId: formState.artistId,
+      description: formState.description,
+      release_date: formState.release_date?.format('YYYY-MM-DD'),
+      cover_image: coverUrl,
+      language: formState.language,
+      publisher: formState.publisher
+    }
+
+    const url = editingAlbum.value 
+      ? `/api/admin/albums/${editingAlbum.value.id}`
+      : '/api/admin/albums'
+    const method = editingAlbum.value ? 'put' : 'post'
+    
+    const response = await service[method](url, albumData)
+    
+    if (response.success) {
+      message.success(`${editingAlbum.value ? '更新' : '添加'}专辑成功`)
+      modalVisible.value = false
+      fetchAlbums()
+    }
+  } catch (error) {
+    console.error('提交专辑失败:', error)
+    message.error('提交失败')
+  } finally {
+    submitting.value = false
+  }
+}
+
+// 在组件挂载时获取标签列表
+onMounted(() => {
+  fetchTags()
+})
+
+// 表格列定义
+const columns = [
+  {
+    title: '封面',
+    dataIndex: 'cover_image',
+    width: 80,
+    slots: {
+      customRender: 'cover'
+    }
+  },
+  {
+    title: '专辑名称',
+    dataIndex: 'title',
+    width: 200
+  },
+  {
+    title: '艺人',
+    dataIndex: ['artist', 'name'],
+    width: 150
+  },
+  {
+    title: '发行日期',
+    dataIndex: 'release_date',
+    width: 120,
+    customRender: ({ text }) => {
+      if (!text) return '-'
+      return dayjs(text).format('YYYY-MM-DD')
+    }
+  },
+  {
+    title: '语言',
+    dataIndex: 'language',
+    width: 100
+  },
+  {
+    title: '发行公司',
+    dataIndex: 'publisher',
+    width: 150
+  },
+  {
+    title: '操作',
+    key: 'action',
+    width: 150,
+    fixed: 'right',
+    slots: {
+      customRender: 'action'
+    }
+  }
+]
+
+// 处理行点击事件（查看详情）
+const handleRowClick = (record: any) => {
+  handleView(record)
+}
+
+// 添加默认封面常量
+const DEFAULT_COVER = 'https://via.placeholder.com/200x200?text=No+Cover'  // 或者使用你的默认封面图片
 </script>
 
 <style scoped>
@@ -723,5 +1080,34 @@ const handleArtistClick = (artist: any) => {
   color: rgba(0, 0, 0, 0.85);
   border-color: rgba(0, 0, 0, 0.85);
   background: rgba(0, 0, 0, 0.05);
+}
+
+.albums-page {
+  padding: 24px;
+}
+
+.table-operations {
+  margin-bottom: 16px;
+}
+
+:deep(.ant-upload-select-picture-card) {
+  width: 200px;
+  height: 200px;
+}
+
+:deep(.ant-upload-list-picture-card-container) {
+  width: 200px;
+  height: 200px;
+}
+
+:deep(.ant-image) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+:deep(.ant-image-img) {
+  object-fit: cover;
+  border-radius: 4px;
 }
 </style> 

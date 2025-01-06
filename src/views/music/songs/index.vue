@@ -58,6 +58,12 @@
 
         </a-button>
 
+        <a-button type="primary" @click="showBatchImport">
+
+          <upload-outlined />批量导入
+
+        </a-button>
+
       </a-space>
 
     </div>
@@ -676,6 +682,18 @@
 
     </a-drawer>
 
+
+
+    <!-- 批量导入音乐表单 -->
+
+    <music-batch-import-modal
+
+      v-model:visible="batchImportVisible"
+
+      @success="handleImportSuccess"
+
+    />
+
   </div>
 
 </template>
@@ -686,7 +704,7 @@
 
 import { ref, onMounted, watch, nextTick, reactive } from 'vue'
 
-import { PlusOutlined, FilterOutlined, SearchOutlined, LikeOutlined, CommentOutlined, DeleteOutlined } from '@ant-design/icons-vue'
+import { PlusOutlined, FilterOutlined, SearchOutlined, LikeOutlined, CommentOutlined, DeleteOutlined, UploadOutlined } from '@ant-design/icons-vue'
 
 import { Empty } from 'ant-design-vue'
 
@@ -707,6 +725,8 @@ import MusicFormModal from '@/components/MusicFormModal.vue'
 import dayjs from 'dayjs'
 
 import { useRoute, useRouter } from 'vue-router'
+
+import MusicBatchImportModal from '@/components/MusicBatchImportModal.vue'
 
 
 
@@ -1776,6 +1796,26 @@ const handleTagClick = (tag: any) => {
     }
 
   })
+
+}
+
+
+
+const batchImportVisible = ref(false)
+
+
+
+const showBatchImport = () => {
+
+  batchImportVisible.value = true
+
+}
+
+
+
+const handleImportSuccess = () => {
+
+  fetchMusicList() // 刷新音乐列表
 
 }
 
