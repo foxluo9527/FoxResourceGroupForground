@@ -1,28 +1,67 @@
-import { service } from '@/utils/request'
-import type { Music } from '@/types/music'
+import request from '@/utils/request'
+import type { SearchResult, SongInfo } from '@/types/music-api'
 
-interface MusicListParams {
-  page?: number
-  limit?: number
-  tag_id?: number
-  keyword?: string
+// 搜索音乐
+export const searchMusic = (params: {
+  keyword: string
+  limit: number
+  page: number
+  vendor: string
+  type?: string
+}) => {
+  return request<{
+    code: number
+    message: string
+    data: {
+      list: SongInfo[]
+      total: number
+      current: number
+      pageSize: number
+    }
+    success: boolean
+  }>({
+    url: '/api/admin/music/search',
+    method: 'get',
+    params: {
+      ...params,
+      type: 'song'
+    }
+  })
 }
 
-interface MusicListResponse {
-  list: Music[]
-  total: number
-  current: number
-  pageSize: number
+// 获取音乐播放链接
+export const getMusicUrl = (params: {
+  id: number
+  vendor: string
+  br: number
+}) => {
+  return request<{
+    code: number
+    message: string
+    data: {
+      url: string
+    }
+    success: boolean
+  }>({
+    url: '/api/admin/music/url',
+    method: 'get',
+    params
+  })
 }
 
-interface ApiResponse<T> {
-  code: number
-  message: string
-  data: T
-  success: boolean
-}
-
-// 获取音乐列表
-export const getMusicList = (params?: MusicListParams) => {
-  return service.get<ApiResponse<MusicListResponse>>('/api/admin/music', { params })
+// 获取音乐详情
+export const getMusicDetail = (params: {
+  id: number
+  vendor: string
+}) => {
+  return request<{
+    code: number
+    message: string
+    data: SongInfo
+    success: boolean
+  }>({
+    url: '/api/admin/music/detail',
+    method: 'get',
+    params
+  })
 } 
