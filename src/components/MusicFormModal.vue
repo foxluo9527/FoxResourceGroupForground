@@ -133,30 +133,46 @@
         </a-col>
       </a-row>
 
-      <a-form-item label="歌词" name="lyrics">
-        <a-radio-group v-model:value="lyricsInputType">
-          <a-radio value="manual">手动输入</a-radio>
-          <a-radio value="file">文件上传</a-radio>
-        </a-radio-group>
-        <template v-if="lyricsInputType === 'manual'">
+      <a-form-item label="歌词">
+        <div class="lyrics-input-container">
           <a-textarea
             v-model:value="formState.lyrics"
             :rows="6"
             placeholder="请输入歌词"
           />
-        </template>
-        <template v-if="lyricsInputType === 'file'">
           <a-upload
-            v-model:file-list="lyricsFileList"
-            :customRequest="handleLyricsUpload"
             accept=".lrc,.txt"
-            :maxCount="1"
+            :before-upload="beforeLyricsUpload"
+            :customRequest="handleLyricsUpload"
+            :showUploadList="false"
           >
-            <a-button>
-              <upload-outlined />上传歌词文件
+            <a-button type="link">
+              <upload-outlined />
+              从文件导入
             </a-button>
           </a-upload>
-        </template>
+        </div>
+      </a-form-item>
+
+      <a-form-item label="翻译歌词">
+        <div class="lyrics-input-container">
+          <a-textarea
+            v-model:value="formState.lyrics_trans"
+            :rows="6"
+            placeholder="请输入翻译歌词"
+          />
+          <a-upload
+            accept=".lrc,.txt"
+            :before-upload="beforeLyricsUpload"
+            :customRequest="handleTransLyricsUpload"
+            :showUploadList="false"
+          >
+            <a-button type="link">
+              <upload-outlined />
+              从文件导入
+            </a-button>
+          </a-upload>
+        </div>
       </a-form-item>
 
       <a-form-item label="描述" name="description">
@@ -210,7 +226,6 @@ const tags = ref<Tag[]>([])
 const artistsLoading = ref(false)
 const albumsLoading = ref(false)
 const tagsLoading = ref(false)
-const lyricsInputType = ref<'manual' | 'file'>('manual')
 
 const audioFileList = ref<any[]>([])
 const imageFileList = ref<any[]>([])
@@ -223,6 +238,7 @@ const formState = reactive({
   genre: '流行',
   language: '中文',
   lyrics: '',
+  lyrics_trans: '',
   artist_id: undefined as number | undefined,
   album_id: undefined as number | undefined,
   tags: [] as string[],
@@ -358,16 +374,52 @@ const handleImageUpload = async (options: any) => {
 }
 
 const handleLyricsUpload = async (options: any) => {
-  const file = options.file
-  const reader = new FileReader()
-  reader.onload = (e) => {
-    formState.lyrics = e.target?.result as string
-    options.onSuccess()
+  console.log('开始处理歌词文件:', options.file)
+  try {
+    const file = options.file
+    if (!file) {
+      console.error('没有获取到文件')
+      message.error('没有获取到文件')
+      return
+    }
+
+    console.log('创建 FileReader')
+    const reader = new FileReader()
+    
+    reader.onload = (event) => {
+      console.log('FileReader 加载完成')
+      try {
+        const content = event.target?.result as string
+        console.log('读取到的内容:', content ? content.substring(0, 100) + '...' : 'null')
+        
+        if (content && content.trim()) {
+          formState.lyrics = content.trim()
+          console.log('设置歌词内容成功')
+          message.success('歌词导入成功')
+        } else {
+          console.warn('歌词文件内容为空')
+          message.warning('歌词文件内容为空')
+        }
+      } catch (error) {
+        console.error('解析歌词文件失败:', error)
+        message.error('解析歌词文件失败')
+      }
+      options.onSuccess?.()
+    }
+
+    reader.onerror = (error) => {
+      console.error('读取歌词文件失败:', error)
+      message.error('读取歌词文件失败')
+      options.onError?.()
+    }
+
+    console.log('开始读取文件内容')
+    reader.readAsText(file)
+  } catch (error) {
+    console.error('处理歌词文件失败:', error)
+    message.error('处理歌词文件失败')
+    options.onError?.()
   }
-  reader.onerror = () => {
-    options.onError()
-  }
-  reader.readAsText(file)
 }
 
 const beforeImageUpload: UploadProps['beforeUpload'] = (file) => {
@@ -385,15 +437,19 @@ const beforeImageUpload: UploadProps['beforeUpload'] = (file) => {
 }
 
 const beforeLyricsUpload: UploadProps['beforeUpload'] = (file) => {
+  console.log('验证歌词文件:', file.name)
   const isText = /\.(lrc|txt)$/.test(file.name.toLowerCase())
   if (!isText) {
     message.error('只能选择 LRC 或 TXT 文件!')
+    return Upload.LIST_IGNORE
   }
   const isLt1M = file.size / 1024 / 1024 < 1
   if (!isLt1M) {
     message.error('文件必须小于 1MB!')
+    return Upload.LIST_IGNORE
   }
-  return isText && isLt1M
+  console.log('歌词文件验证通过')
+  return true  // 修改这里，返回 true 允许上传
 }
 
 // 获取音乐详情
@@ -411,6 +467,7 @@ const fetchMusicDetail = async (id: number) => {
       formState.genre = music.genre || '流行'
       formState.language = music.language || '中文'
       formState.lyrics = music.lyrics || ''
+      formState.lyrics_trans = music.lyrics_trans || ''
       formState.duration = music.duration || 0
       formState.tags = music.tags?.map(tag => tag.name) || []
 
@@ -478,41 +535,22 @@ watch(() => props.visible, async (newVal) => {
     await fetchTags()
 
     // 如果是编辑模式
-    if (props.music && props.music.artist) {
-      // 设置艺人信息
-      formState.artist_id = props.music.artist.id
-      
-      // 如果艺人不在列表中，添加到列表
-      if (!artists.value.find(a => a.id === props.music.artist.id)) {
-        artists.value.push({
-          id: props.music.artist.id,
-          name: props.music.artist.name
-        })
-      }
-
-      // 先获取该艺人的专辑列表
-      await fetchAlbums(props.music.artist.id)
-
-      // 等专辑列表加载完成后，再设置专辑ID
-      if (props.music.album) {
-        // 延迟一帧设置专辑ID，确保专辑列表已经渲染
-        nextTick(() => {
-          formState.album_id = props.music.album.id
-        })
-      }
-    } else if (props.musicId) {
-      // 如果是通过 ID 编辑，获取详情
+    if (props.musicId) {
       await fetchMusicDetail(props.musicId)
     } else {
       // 新增模式：重置表单
       formRef.value?.resetFields()
       resetFormState()
     }
+  } else {
+    // 关闭弹窗时也重置状态
+    resetFormState()
   }
 })
 
-// 添加重置表单状态的函数
+// 修改重置表单状态的函数
 const resetFormState = () => {
+  // 重置表单数据
   formState.title = ''
   formState.description = ''
   formState.url = ''
@@ -520,14 +558,34 @@ const resetFormState = () => {
   formState.genre = '流行'
   formState.language = '中文'
   formState.lyrics = ''
+  formState.lyrics_trans = ''
   formState.artist_id = undefined
   formState.album_id = undefined
   formState.tags = []
   formState.duration = 0
+
+  // 重置文件列表
   audioFileList.value = []
   imageFileList.value = []
-  lyricsInputType.value = 'manual'
+
+  // 重置下拉列表
   albums.value = []
+
+  // 清空文件上传组件的状态
+  nextTick(() => {
+    const uploads = document.querySelectorAll('.ant-upload-list-item-remove')
+    uploads.forEach((el: any) => el.click())
+  })
+}
+
+// 修改取消处理函数
+const handleCancel = () => {
+  // 重置表单验证状态
+  formRef.value?.resetFields()
+  // 重置所有状态
+  resetFormState()
+  // 关闭弹窗
+  emit('update:visible', false)
 }
 
 // 修改表单提交
@@ -596,12 +654,6 @@ const handleSubmit = async () => {
     console.error('提交表单失败:', error)
     message.error(error.message || '提交失败')
   }
-}
-
-const handleCancel = () => {
-  formRef.value?.resetFields()
-  resetFormState()
-  emit('update:visible', false)
 }
 
 // 修改艺人变化处理函数
@@ -695,6 +747,56 @@ const handleAlbumSearch = async (keyword: string) => {
 const handleArtistSearch = useDebounce((value: string) => {
   searchArtists(value)
 }, 300)
+
+// 处理翻译歌词文件上传
+const handleTransLyricsUpload = async (options: any) => {
+  console.log('开始处理翻译歌词文件:', options.file)
+  try {
+    const file = options.file
+    if (!file) {
+      console.error('没有获取到文件')
+      message.error('没有获取到文件')
+      return
+    }
+
+    console.log('创建 FileReader')
+    const reader = new FileReader()
+    
+    reader.onload = (event) => {
+      console.log('FileReader 加载完成')
+      try {
+        const content = event.target?.result as string
+        console.log('读取到的内容:', content ? content.substring(0, 100) + '...' : 'null')
+        
+        if (content && content.trim()) {
+          formState.lyrics_trans = content.trim()
+          console.log('设置翻译歌词内容成功')
+          message.success('翻译歌词导入成功')
+        } else {
+          console.warn('翻译歌词文件内容为空')
+          message.warning('翻译歌词文件内容为空')
+        }
+      } catch (error) {
+        console.error('解析翻译歌词文件失败:', error)
+        message.error('解析翻译歌词文件失败')
+      }
+      options.onSuccess?.()
+    }
+
+    reader.onerror = (error) => {
+      console.error('读取翻译歌词文件失败:', error)
+      message.error('读取翻译歌词文件失败')
+      options.onError?.()
+    }
+
+    console.log('开始读取文件内容')
+    reader.readAsText(file)
+  } catch (error) {
+    console.error('处理翻译歌词文件失败:', error)
+    message.error('处理翻译歌词文件失败')
+    options.onError?.()
+  }
+}
 </script>
 
 <style scoped>
@@ -717,5 +819,15 @@ const handleArtistSearch = useDebounce((value: string) => {
 
 :deep(.ant-radio-group) {
   margin-bottom: 8px;
+}
+
+.lyrics-input-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lyrics-input-container .ant-upload {
+  align-self: flex-end;
 }
 </style> 

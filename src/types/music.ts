@@ -28,7 +28,7 @@ export interface Music {
   genre: string
   language: string
   lyrics?: string
-  lyrics_type: string
+  lyrics_trans: string
   duration: number
   artist?: {
     id: number
