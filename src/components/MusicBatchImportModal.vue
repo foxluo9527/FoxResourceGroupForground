@@ -460,13 +460,11 @@ const handleSubmit = async () => {
         // 如果有在线资源，需要先下载再上传
         else if (song.url) {
           try {
-            const response = await fetch(song.url)
-            const blob = await response.blob()
-            const file = new File([blob], `${song.title}.mp3`, { type: 'audio/mpeg' })
-            
-            const formData = new FormData()
-            formData.append('file', file)
-            const uploadResponse = await service.post('/api/upload/audio', formData)
+            // 直接将 URL 传给后端处理
+            const uploadResponse = await service.post('/api/upload/audio', {
+              url: song.url,  // 添加 URL 参数
+              filename: `${song.title}.mp3`  // 可选：提供文件名
+            })
             
             if (!uploadResponse.success) {
               console.error('音乐文件上传失败:', uploadResponse.message)
@@ -475,7 +473,7 @@ const handleSubmit = async () => {
             }
             musicUrl = uploadResponse.data.url
           } catch (error) {
-            console.error('下载音乐文件失败:', error)
+            console.error('音乐文件上传失败:', error)
             failCount++
             continue
           }
