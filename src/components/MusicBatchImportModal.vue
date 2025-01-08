@@ -32,14 +32,10 @@
         v-if="searchResults.length"
         :columns="columns"
         :data-source="searchResults"
-        :row-selection="{ 
-          selectedRowKeys: selectedKeys,
-          onChange: onSelectionChange,
-          getCheckboxProps: getCheckboxProps
-        }"
+        :row-selection="rowSelection"
         :pagination="pagination"
         :loading="searching"
-        row-key="url"
+        :row-key="getMusicKey"
       >
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'cover_image'">
@@ -127,7 +123,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onUnmounted } from 'vue'
+import { ref, reactive, onUnmounted, computed, watch } from 'vue'
 import { message } from 'ant-design-vue'
 import {
   PlayCircleOutlined,
@@ -178,7 +174,6 @@ const emit = defineEmits(['update:visible', 'success'])
 const searchKeyword = ref('')
 const searching = ref(false)
 const searchResults = ref<MusicItem[]>([])
-const selectedKeys = ref<(string | number)[]>([])
 const selectedSongs = ref<MusicItem[]>([])
 const submitting = ref(false)
 const audioPlayer = ref<HTMLAudioElement>()
@@ -243,7 +238,7 @@ const musicResourceMap = ref<Map<string, { url: string, file: File }>>(new Map()
 
 // 添加获取复选框属性的函数
 const getCheckboxProps = (record: MusicItem) => ({
-  disabled: !record.url && !audioFile.value,  // 没有 URL 且没有上传文件时禁用选择
+  disabled: !record.url && !record.uploadFile,  // 有 URL 或本地文件时可选
   name: record.title,
 })
 
@@ -277,6 +272,24 @@ const platforms = [
   { label: 'QQ音乐', value: 'qq' }
 ]
 const selectedPlatform = ref('netease')
+
+// 添加一个函数来获取音乐的唯一标识
+const getMusicKey = (record: MusicItem) => {
+  // 使用 title 作为基础标识，因为它是最稳定的
+  return `${record.title}_${record.singer?.name || 'unknown'}`
+}
+
+// 修改表格配置
+const rowSelection = computed(() => ({
+  type: 'checkbox',
+  // 使用相同的 getMusicKey 函数来生成 selectedRowKeys
+  selectedRowKeys: selectedSongs.value.map(song => getMusicKey(song)),
+  onChange: (_selectedRowKeys: string[], selectedRows: MusicItem[]) => {
+    selectedSongs.value = selectedRows
+  },
+  getCheckboxProps,
+  preserveSelectedRowKeys: true
+}))
 
 // 处理搜索
 const handleSearch = async () => {
@@ -320,12 +333,6 @@ const handleSearch = async () => {
   } finally {
     searching.value = false
   }
-}
-
-// 处理选择变化
-const onSelectionChange = (selectedRowKeys: (string | number)[], selectedRows: MusicItem[]) => {
-  selectedKeys.value = selectedRowKeys
-  selectedSongs.value = selectedRows
 }
 
 // 修改预览处理函数
@@ -441,11 +448,10 @@ const handleUploadForRecord = async (file: File, record: MusicItem) => {
   }
 }
 
-// 修改取消处理函数
+// 修改清理函数
 const handleCancel = () => {
   searchKeyword.value = ''
   searchResults.value = []
-  selectedKeys.value = []
   selectedSongs.value = []
   pagination.current = 1
   
