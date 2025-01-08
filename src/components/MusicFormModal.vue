@@ -491,31 +491,31 @@ const fetchMusicDetail = async (id: number) => {
       }
 
       // 处理艺人信息
-      if (music.artist) {
+      if (music.artists) {
         // 设置艺人ID
-        formState.artist_id = music.artist.id
+        formState.artist_id = music.artists[0].id
         
         // 确保艺人在列表中
-        if (!artists.value.find(a => a.id === music.artist.id)) {
+        if (!artists.value.find(a => a.id === music.artists[0].id)) {
           artists.value = [...artists.value, {
-            id: music.artist.id,
-            name: music.artist.name
+            id: music.artists[0].id,
+            name: music.artists[0].name
           }]
         }
 
         // 获取并设置专辑列表
-        await fetchAlbums(music.artist.id)
+        await fetchAlbums(music.artists[0].id)
 
         // 处理专辑信息
-        if (music.album) {
+        if (music.albums) {
           // 设置专辑ID
-          formState.album_id = music.album.id
+          formState.album_id = music.albums[0].id
           
           // 确保专辑在列表中
-          if (!albums.value.find(a => a.value === music.album.id)) {
+          if (!albums.value.find(a => a.value === music.albums[0].id)) {
             albums.value = [...albums.value, {
-              label: music.album.title,
-              value: music.album.id
+              label: music.albums[0].title,
+              value: music.albums[0].id
             }]
           }
         }

@@ -55,16 +55,31 @@
       </template>
 
       <!-- 艺人 -->
-      <template #artist="{ record }">
-        <template v-if="record.artist">
-          <a-tag 
-            class="artist-tag clickable" 
-            @click.stop="handleArtistClick(record.artist)"
-          >
-            {{ record.artist.name }}
-          </a-tag>
-        </template>
-        <template v-else>-</template>
+      <template #artists="{ record }">
+        <a-space wrap>
+          <template v-if="record.artists?.length">
+            <template v-for="(artist, index) in record.artists" :key="artist.id">
+              <a-tag 
+                class="clickable-tag"
+                @click.stop="handleArtistClick(artist)"
+              >
+                {{ artist.name }}
+              </a-tag>
+              <template v-if="index !== record.artists.length - 1">
+                /
+              </template>
+            </template>
+          </template>
+          <template v-else-if="record.artist">
+            <a-tag 
+              class="clickable-tag"
+              @click.stop="handleArtistClick(record.artist)"
+            >
+              {{ record.artist.name }}
+            </a-tag>
+          </template>
+          <template v-else>-</template>
+        </a-space>
       </template>
 
       <!-- 操作 -->
@@ -104,22 +119,19 @@
           />
         </a-descriptions-item>
         <a-descriptions-item label="艺人">
-          <template v-if="currentAlbum?.artist">
-            <div class="artist-info clickable" @click="handleArtistClick(currentAlbum.artist)">
-              <a-space align="start">
-                <a-avatar :src="currentAlbum.artist.avatar" :size="64">
-                  {{ currentAlbum.artist.name?.charAt(0) }}
-                </a-avatar>
-                <div>
-                  <div class="artist-name">{{ currentAlbum.artist.name }}</div>
-                  <div class="artist-alias">
-                    <template v-if="currentAlbum.artist.alias">
-                      <a-tag v-for="alias in currentAlbum.artist.alias.split(';')" :key="alias">
-                        {{ alias }}
-                      </a-tag>
-                    </template>
+          <template v-if="currentAlbum?.artists?.length">
+            <div class="artist-info">
+              <a-space wrap size="middle">
+                <template v-for="(artist, index) in currentAlbum.artists" :key="artist.id">
+                  <div class="artist-card" @click="handleArtistClick(artist)">
+                    <div class="artist-content">
+                      <a-avatar :src="artist.avatar" :size="48">
+                        {{ artist.name?.charAt(0) }}
+                      </a-avatar>
+                      <div class="artist-name">{{ artist.name }}</div>
+                    </div>
                   </div>
-                </div>
+                </template>
               </a-space>
             </div>
           </template>
@@ -163,14 +175,14 @@
                 <div class="track-info">
                   <div class="track-title">{{ track.title }}</div>
                   <div class="track-meta">
-                    <span class="track-artists">
-                      {{ track.artists?.map(artist => artist.name).join(', ') }}
-                    </span>
+                    <div class="track-artists">
+                      {{ track.artists?.map(artist => artist.name).join(' / ') || track.artist?.name || '未知艺人' }}
+                    </div>
                   </div>
                 </div>
               </div>
               <div class="track-right">
-                <span class="track-duration">{{ formatDuration(track.duration) }}</span>
+                {{ dayjs(track.duration * 1000).format('mm:ss') }}
               </div>
             </div>
           </div>
@@ -854,21 +866,23 @@ onMounted(() => {
 const columns = [
   {
     title: '封面',
+    key: 'cover',
     dataIndex: 'cover_image',
     width: 80,
-    slots: {
-      customRender: 'cover'
-    }
+    slots: { customRender: 'cover' }
   },
   {
-    title: '专辑名称',
+    title: '标题',
     dataIndex: 'title',
-    width: 200
+    key: 'title',
+    width: '20%'
   },
   {
     title: '艺人',
-    dataIndex: ['artist', 'name'],
-    width: 150
+    key: 'artists',
+    dataIndex: 'artists',
+    width: '20%',
+    slots: { customRender: 'artists' }
   },
   {
     title: '发行日期',
@@ -993,24 +1007,27 @@ const DEFAULT_COVER = 'https://via.placeholder.com/200x200?text=No+Cover'  // �
 .track-info {
   flex: 1;
   min-width: 0;
-}
 
-.track-title {
-  font-size: 14px;
-  font-weight: 500;
-  margin-bottom: 4px;
-  color: rgba(0, 0, 0, 0.85);
-}
+  .track-title {
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 4px;
+    color: rgba(0, 0, 0, 0.85);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 
-.track-meta {
-  color: rgba(0, 0, 0, 0.45);
-  font-size: 12px;
-}
+  .track-meta {
+    color: rgba(0, 0, 0, 0.45);
+    font-size: 12px;
 
-.track-artists {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+    .track-artists {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
 }
 
 .track-right {
@@ -1108,5 +1125,39 @@ const DEFAULT_COVER = 'https://via.placeholder.com/200x200?text=No+Cover'  // �
 :deep(.ant-image-img) {
   object-fit: cover;
   border-radius: 4px;
+}
+
+.artist-card {
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.3s;
+  text-align: center;
+
+  &:hover {
+    background-color: #f5f5f5;
+  }
+
+  .artist-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+
+    .artist-name {
+      font-weight: 500;
+      margin-top: 4px;
+    }
+  }
+}
+
+.clickable-tag {
+  cursor: pointer;
+  transition: all 0.3s;
+
+  &:hover {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
 }
 </style> 

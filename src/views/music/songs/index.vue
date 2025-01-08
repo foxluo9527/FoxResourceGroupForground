@@ -162,7 +162,33 @@
 
         <a-space wrap>
 
-          <template v-if="record.artist">
+          <template v-if="record.artists?.length">
+
+            <template v-for="(artist, index) in record.artists" :key="artist.id">
+
+              <a-tag 
+
+                class="clickable-tag"
+
+                @click.stop="handleArtistClick(artist)"
+
+              >
+
+                {{ artist.name }}
+
+              </a-tag>
+
+              <template v-if="index !== record.artists.length - 1">
+
+                /
+
+              </template>
+
+            </template>
+
+          </template>
+
+          <template v-else-if="record.artist">
 
             <a-tag 
 
@@ -319,47 +345,23 @@
         </a-descriptions-item>
 
         <a-descriptions-item label="艺人">
-
-          <template v-if="currentMusic?.artist">
-
-            <div class="artist-info" @click="handleArtistClick(currentMusic.artist)">
-
-              <a-space align="start">
-
-                <a-avatar :src="currentMusic.artist.avatar" :size="64">
-
-                  {{ currentMusic.artist.name?.charAt(0) }}
-
-                </a-avatar>
-
-                <div class="artist-content">
-
-                  <div class="artist-name">{{ currentMusic.artist.name }}</div>
-
-                  <div class="artist-alias">
-
-                    <template v-if="currentMusic.artist.alias">
-
-                      <a-tag v-for="alias in currentMusic.artist.alias.split(';')" :key="alias">
-
-                        {{ alias }}
-
-                      </a-tag>
-
-                    </template>
-
+          <template v-if="currentMusic?.artists?.length">
+            <div class="artist-info">
+              <a-space wrap size="middle">
+                <template v-for="(artist, index) in currentMusic.artists" :key="artist.id">
+                  <div class="artist-card" @click="handleArtistClick(artist)">
+                    <div class="artist-content">
+                      <a-avatar :src="artist.avatar" :size="48">
+                        {{ artist.name?.charAt(0) }}
+                      </a-avatar>
+                      <div class="artist-name">{{ artist.name }}</div>
+                    </div>
                   </div>
-
-                </div>
-
+                </template>
               </a-space>
-
             </div>
-
           </template>
-
           <template v-else>-</template>
-
         </a-descriptions-item>
 
         <a-descriptions-item label="标签">
@@ -502,7 +504,7 @@
 
               <div class="audio-title">{{ currentMusic.title }}</div>
 
-              <div class="audio-artist">{{ currentMusic.artist?.name }}</div>
+              <div class="audio-artist">{{ currentMusic.artists?.map(artist => artist.name)?.join('/') }}</div>
 
             </div>
 
@@ -2735,6 +2737,54 @@ pre {
   border-radius: 4px;
 
   overflow: hidden;
+
+}
+
+
+
+.artist-card {
+
+  cursor: pointer;
+
+  padding: 4px 8px;
+
+  border-radius: 4px;
+
+  transition: background-color 0.3s;
+
+  text-align: center;
+
+
+
+  &:hover {
+
+    background-color: #f5f5f5;
+
+  }
+
+
+
+  .artist-content {
+
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+
+    gap: 4px;
+
+
+
+    .artist-name {
+
+      font-weight: 500;
+
+      margin-top: 4px;
+
+    }
+
+  }
 
 }
 

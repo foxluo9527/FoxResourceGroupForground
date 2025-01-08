@@ -11,10 +11,23 @@
       <!-- 搜索区域 -->
       <div class="search-area">
         <a-space>
+          <a-upload
+            directory
+            :showUploadList="false"
+            :beforeUpload="handleFolderSelect"
+            accept="audio/*"
+            :disabled="isImportingFolder"
+          >
+            <a-button :loading="isImportingFolder">
+              <folder-outlined />
+              选择文件夹
+            </a-button>
+          </a-upload>
           <a-select
             v-model:value="selectedPlatform"
             style="width: 120px"
             :options="platforms"
+            :disabled="isImportingFolder"
           />
           <a-input-search
             v-model:value="searchKeyword"
@@ -23,8 +36,17 @@
             :loading="searching"
             @search="handleSearch"
             style="width: 400px"
+            :disabled="isImportingFolder"
           />
         </a-space>
+        
+        <!-- 添加导入进度条 -->
+        <a-progress
+          v-if="isImportingFolder"
+          :percent="importProgress"
+          status="active"
+          style="margin-top: 16px"
+        />
       </div>
 
       <!-- 搜索结果列表 -->
@@ -79,16 +101,13 @@
                     试听
                   </template>
                 </a-button>
-                <template v-if="record.uploadFile">
+                <template v-if="!isImportingFolder && !record.uploadFile">
                   <a-upload
                     :show-upload-list="false"
                     :before-upload="(file) => handleUploadForRecord(file, record)"
                     accept="audio/*"
                   >
-                    <a-button 
-                      type="link" 
-                      size="small"
-                    >
+                    <a-button type="link" size="small">
                       <redo-outlined />
                       重新选择
                     </a-button>
@@ -97,19 +116,18 @@
               </template>
               <template v-else>
                 <span class="no-resource">暂无资源</span>
-                <a-upload
-                  :show-upload-list="false"
-                  :before-upload="(file) => handleUploadForRecord(file, record)"
-                  accept="audio/*"
-                >
-                  <a-button 
-                    type="link" 
-                    size="small"
+                <template v-if="!isImportingFolder">
+                  <a-upload
+                    :show-upload-list="false"
+                    :before-upload="(file) => handleUploadForRecord(file, record)"
+                    accept="audio/*"
                   >
-                    <upload-outlined />
-                    上传资源
-                  </a-button>
-                </a-upload>
+                    <a-button type="link" size="small">
+                      <upload-outlined />
+                      上传资源
+                    </a-button>
+                  </a-upload>
+                </template>
               </template>
             </a-space>
           </template>
@@ -129,7 +147,8 @@ import {
   PlayCircleOutlined,
   PauseCircleOutlined,
   UploadOutlined,
-  RedoOutlined
+  RedoOutlined,
+  FolderOutlined
 } from '@ant-design/icons-vue'
 import { service } from '@/utils/request'
 
@@ -448,6 +467,150 @@ const handleUploadForRecord = async (file: File, record: MusicItem) => {
   }
 }
 
+// 添加状态控制
+const isImportingFolder = ref(false)
+const importingFiles = ref<File[]>([])
+const importProgress = ref(0)
+
+// 修改文件夹处理函数
+const handleFolderSelect = async (file: File) => {
+  console.log('处理文件:', file.name)
+  // 如果是第一个文件，清空搜索结果并开始导入模式
+  if (importingFiles.value.length === 0) {
+    isImportingFolder.value = true
+    searchResults.value = []
+    selectedSongs.value = []
+  }
+
+  // 检查是否是音频文件
+  const ext = file.name.split('.').pop()?.toLowerCase()
+  if (!ext || !['mp3', 'wav', 'flac', 'aac', 'm4a'].includes(ext)) {
+    return Upload.LIST_IGNORE
+  }
+
+  // 添加到导入列表
+  importingFiles.value.push(file)
+
+  // 如果是最后一个文件，立即开始处理
+  if (file.webkitRelativePath.split('/').length === 2) {
+    console.log('检测到最后一个文件，开始处理')
+    handleFolderImportComplete()
+  }
+
+  return Upload.LIST_IGNORE
+}
+
+// 只保留使用防抖的 watch
+const debouncedImportComplete = ref<NodeJS.Timeout>()
+
+watch(importingFiles, (newFiles) => {
+  if (newFiles.length > 0) {
+    // 清除之前的定时器
+    if (debouncedImportComplete.value) {
+      clearTimeout(debouncedImportComplete.value)
+    }
+    // 设置新的定时器，等待500ms确保所有文件都被收集
+    debouncedImportComplete.value = setTimeout(() => {
+      console.log('开始处理收集到的文件')
+      handleFolderImportComplete()
+    }, 500)
+  }
+})
+
+// 在组件卸载时清理定时器
+onUnmounted(() => {
+  if (debouncedImportComplete.value) {
+    clearTimeout(debouncedImportComplete.value)
+  }
+})
+
+// 修改文件夹导入完成的处理函数
+const handleFolderImportComplete = async () => {
+  if (importingFiles.value.length === 0) return
+  console.log('开始处理文件列表，共', importingFiles.value.length, '个文件')
+
+  try {
+    // 开始处理所有文件
+    const totalFiles = importingFiles.value.length
+    searchResults.value = []
+
+    // 使用 Promise.all 并行处理所有文件
+    const searchPromises = importingFiles.value.map(async (file, index) => {
+      const fileName = file.name.replace(/\.[^/.]+$/, '') // 移除扩展名
+      console.log('开始搜索音乐信息:', fileName)
+
+      // 更新进度
+      importProgress.value = Math.round(((index + 1) / totalFiles) * 100)
+
+      try {
+        // 从文件名中提取歌手和歌曲名
+        const [songName, artistName] = fileName.split(' - ')
+        const searchKeyword = artistName ? `${songName} ${artistName}` : songName
+
+        // 搜索音乐信息
+        const searchResponse = await service.get(`/api/public/music/search/${selectedPlatform.value}`, {
+          params: {
+            keyword: searchKeyword,
+            page: 1,
+            limit: 1
+          }
+        })
+        console.log(`搜索结果 (${fileName}):`, searchResponse)
+
+        // 创建音乐项
+        const musicItem: MusicItem = searchResponse.success && searchResponse.data?.items?.[0]
+          ? {
+              ...searchResponse.data.items[0],
+              uploadFile: file,
+              url: URL.createObjectURL(file),
+              singer: searchResponse.data.items[0].singers?.[0] || searchResponse.data.items[0].singer,
+              album: searchResponse.data.items[0].album || { title: '未知专辑' },
+              language: searchResponse.data.items[0].language || '未知',
+              lrc: searchResponse.data.items[0].lrc || { lyric: '', lyric_trans: '' }
+            }
+          : {
+              title: songName,
+              description: '',
+              uploadFile: file,
+              url: URL.createObjectURL(file),
+              singer: { name: artistName || '未知歌手' },
+              album: { title: '未知专辑' },
+              language: '未知',
+              lrc: { lyric: '', lyric_trans: '' }
+            }
+
+        return musicItem
+      } catch (error) {
+        console.error(`搜索音乐信息失败 (${fileName}):`, error)
+        // 即使搜索失败也返回基本信息
+        return {
+          title: songName,
+          description: '',
+          uploadFile: file,
+          url: URL.createObjectURL(file),
+          singer: { name: artistName || '未知歌手' },
+          album: { title: '未知专辑' },
+          language: '未知',
+          lrc: { lyric: '', lyric_trans: '' }
+        }
+      }
+    })
+
+    // 等待所有搜索完成
+    const results = await Promise.all(searchPromises)
+    searchResults.value = results
+    
+    // 自动选中所有导入的音乐
+    selectedSongs.value = [...searchResults.value]
+    console.log('处理完成，共导入', searchResults.value.length, '首音乐')
+  } finally {
+    // 重置状态
+    importingFiles.value = []
+    importProgress.value = 0
+    isImportingFolder.value = false
+  }
+}
+
 // 修改清理函数
 const handleCancel = () => {
   searchKeyword.value = ''
@@ -470,6 +633,10 @@ const handleCancel = () => {
     }
   })
   musicResourceMap.value.clear()
+  
+  isImportingFolder.value = false
+  importingFiles.value = []
+  importProgress.value = 0
   
   emit('update:visible', false)
 }

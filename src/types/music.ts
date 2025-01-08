@@ -30,11 +30,11 @@ export interface Music {
   lyrics?: string
   lyrics_trans: string
   duration: number
-  artist?: {
+  artists?: Array<{
     id: number
     name: string
     alias: string
-  }
+  }>
   albums?: Array<{
     id: number
     title: string
