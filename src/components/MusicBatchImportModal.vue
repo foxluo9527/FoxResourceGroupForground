@@ -10,14 +10,21 @@
     <div class="import-container">
       <!-- 搜索区域 -->
       <div class="search-area">
-        <a-input-search
-          v-model:value="searchKeyword"
-          placeholder="输入歌曲名称、艺人名称搜索"
-          enter-button
-          :loading="searching"
-          @search="handleSearch"
-          style="width: 400px"
-        />
+        <a-space>
+          <a-select
+            v-model:value="selectedPlatform"
+            style="width: 120px"
+            :options="platforms"
+          />
+          <a-input-search
+            v-model:value="searchKeyword"
+            placeholder="输入歌曲名称、艺人名称搜索"
+            enter-button
+            :loading="searching"
+            @search="handleSearch"
+            style="width: 400px"
+          />
+        </a-space>
       </div>
 
       <!-- 搜索结果列表 -->
@@ -35,6 +42,14 @@
         row-key="url"
       >
         <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'cover_image'">
+            <a-image
+              :width="50"
+              :src="record.cover_image || defaultCover"
+              :fallback="defaultCover"
+            />
+          </template>
+          
           <template v-if="column.key === 'title'">
             <div class="song-info">
               <span class="song-name">{{ record.title }}</span>
@@ -127,11 +142,22 @@ interface MusicItem {
   description: string
   language: string
   url: string
-  singer: {
+  cover_image?: string
+  singers?: Array<{
+    id: number
     name: string
+    alias?: string
+    avatar?: string
+  }>
+  singer?: {
+    id: number
+    name: string
+    alias?: string
+    avatar?: string
   }
   album: {
     title: string
+    cover_image?: string
   }
   lrc: {
     lyric: string
@@ -139,7 +165,7 @@ interface MusicItem {
   }
   previewLoading?: boolean
   disabled?: boolean
-  uploadFile?: File  // 添加上传文件引用
+  uploadFile?: File
 }
 
 const props = defineProps<{
@@ -169,8 +195,17 @@ const pagination = reactive({
   }
 })
 
+// 添加默认封面
+import defaultCover from '@/assets/default-cover.png'
+
 // 表格列定义
 const columns = [
+  {
+    title: '封面',
+    dataIndex: 'cover_image',
+    key: 'cover_image',
+    width: '80px'
+  },
   {
     title: '歌曲名称',
     dataIndex: 'title',
@@ -236,6 +271,13 @@ const setupAudioListeners = () => {
   }
 }
 
+// 添加音乐平台选择
+const platforms = [
+  { label: '网易云音乐', value: 'netease' },
+  { label: 'QQ音乐', value: 'qq' }
+]
+const selectedPlatform = ref('netease')
+
 // 处理搜索
 const handleSearch = async () => {
   if (!searchKeyword.value.trim()) {
@@ -245,7 +287,7 @@ const handleSearch = async () => {
 
   searching.value = true
   try {
-    const response = await service.get('/api/public/music/search', {
+    const response = await service.get(`/api/public/music/search/${selectedPlatform.value}`, {
       params: {
         keyword: searchKeyword.value,
         page: pagination.current,
@@ -253,16 +295,15 @@ const handleSearch = async () => {
       }
     })
 
-    console.log('搜索结果:', response)
-    
     if (response.success && response.data?.items) {
-      // 处理搜索结果，恢复已上传的文件状态
       searchResults.value = response.data.items.map(item => {
         const resourceInfo = musicResourceMap.value.get(item.title)
         return {
           ...item,
           url: resourceInfo?.url || item.url,
-          uploadFile: resourceInfo?.file
+          uploadFile: resourceInfo?.file,
+          singer: item.singers?.[0] || item.singer, // 兼容两种数据格式
+          cover_image: item.album?.cover_image || item.cover_image || defaultCover // 优先使用专辑封面
         }
       })
       pagination.total = response.data.total
@@ -427,7 +468,28 @@ const handleCancel = () => {
   emit('update:visible', false)
 }
 
-// 提交导入
+// 添加上传图片的函数
+const uploadImageByUrl = async (imageUrl: string, filename: string) => {
+  if (!imageUrl) return ''
+  
+  try {
+    const uploadResponse = await service.post('/api/upload/image', {
+      url: imageUrl,
+      filename
+    })
+    
+    if (!uploadResponse.success) {
+      console.error('图片上传失败:', uploadResponse.message)
+      return ''
+    }
+    return uploadResponse.data.url
+  } catch (error) {
+    console.error('图片上传失败:', error)
+    return ''
+  }
+}
+
+// 修改提交函数中的处理逻辑
 const handleSubmit = async () => {
   if (!selectedSongs.value.length) {
     message.warning('请选择要导入的音乐')
@@ -442,9 +504,8 @@ const handleSubmit = async () => {
   try {
     for (const song of selectedSongs.value) {
       try {
+        // 处理音乐文件上传
         let musicUrl = song.url
-
-        // 如果是上传的文件，直接上传
         if (song.uploadFile) {
           const formData = new FormData()
           formData.append('file', song.uploadFile)
@@ -456,9 +517,7 @@ const handleSubmit = async () => {
             continue
           }
           musicUrl = uploadResponse.data.url
-        } 
-        // 如果有在线资源，需要先下载再上传
-        else if (song.url) {
+        } else if (song.url) {
           try {
             // 直接将 URL 传给后端处理
             const uploadResponse = await service.post('/api/upload/audio', {
@@ -479,16 +538,45 @@ const handleSubmit = async () => {
           }
         }
 
+        // 处理艺人封面上传
+        const artists = song.singers || [song.singer]
+        const processedArtists = await Promise.all(
+          artists.map(async (artist) => {
+            if (artist.avatar) {
+              const avatarUrl = await uploadImageByUrl(
+                artist.avatar,
+                `artist_${artist.name}_avatar.jpg`
+              )
+              return { ...artist, avatar: avatarUrl }
+            }
+            return artist
+          })
+        )
+
+        // 处理专辑封面上传
+        let processedAlbum = song.album
+        if (song.album?.cover_image) {
+          const albumCoverUrl = await uploadImageByUrl(
+            song.album.cover_image,
+            `album_${song.album.title}_cover.jpg`
+          )
+          processedAlbum = {
+            ...song.album,
+            cover_image: albumCoverUrl
+          }
+        }
+
         // 创建音乐记录
         const musicData = {
           title: song.title,
           description: song.description || '',
           url: musicUrl,
+          cover_image: processedAlbum?.cover_image || '',  // 使用专辑封面作为音乐封面
           language: song.language,
           lyrics: song.lrc?.lyric || '',
           lyrics_trans: song.lrc?.lyric_trans || '',
-          artist_name: song.singer?.name || '',
-          album_title: song.album?.title || ''
+          artists: processedArtists,  // 使用处理后的艺人信息
+          album: processedAlbum  // 使用处理后的专辑信息
         }
 
         const createResponse = await service.post('/api/admin/music', musicData)
@@ -575,5 +663,10 @@ onUnmounted(() => {
 
 .anticon {
   margin-right: 4px;
+}
+
+.ant-image {
+  border-radius: 4px;
+  overflow: hidden;
 }
 </style> 

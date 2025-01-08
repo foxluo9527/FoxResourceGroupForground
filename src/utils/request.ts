@@ -15,7 +15,7 @@ interface Response<T = any> {
 
 export const service: AxiosInstance = axios.create({
   baseURL: getBaseUrl(),
-  timeout: 5000,
+  timeout: 30000,
   transformResponse: [
     ...(axios.defaults.transformResponse as any[]),
     (data) => {

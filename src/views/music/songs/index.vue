@@ -110,7 +110,7 @@
 
             :width="50"
 
-            :src="record.cover_image"
+            :src="record.cover_image || defaultCover"
 
             :fallback="defaultCover"
 
@@ -2725,6 +2725,16 @@ pre {
   opacity: 0.8;
 
   transform: scale(1.05);
+
+}
+
+
+
+.ant-image {
+
+  border-radius: 4px;
+
+  overflow: hidden;
 
 }
 

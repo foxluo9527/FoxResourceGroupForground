@@ -74,7 +74,7 @@
           <a-divider type="vertical" />
           <a-popconfirm
             title="确定要删除这个专辑吗？"
-            @confirm="() => handleDelete(record.id)"
+            @confirm="() => handleDelete(record)"
           >
             <a class="danger">删除</a>
           </a-popconfirm>
@@ -138,7 +138,7 @@
           {{ currentAlbum?.release_date ? dayjs(currentAlbum.release_date).format('YYYY-MM-DD') : '-' }}
         </a-descriptions-item>
         <a-descriptions-item label="收录歌曲">
-          {{ currentAlbum?.track_count || 0 }} 首
+          {{ currentAlbum?.tracks_count || 0 }} 首
         </a-descriptions-item>
         <a-descriptions-item label="简介">
           {{ currentAlbum?.description || '-' }}
@@ -424,10 +424,9 @@ const handleAdd = () => {
 // 编辑专辑
 const handleEdit = async (record: any) => {
   editingAlbum.value = record
-  
   try {
     // 获取艺人详情
-    const artistId = record.artist.id
+    const artistId = record.id
     console.log('artistId', artistId)
     if (artistId) {
       const artistResponse = await service.get(`/api/admin/artists/${artistId}`)
