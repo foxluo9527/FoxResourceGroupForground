@@ -174,11 +174,6 @@
                 </div>
                 <div class="track-info">
                   <div class="track-title">{{ track.title }}</div>
-                  <div class="track-meta">
-                    <div class="track-artists">
-                      {{ track.artists?.map(artist => artist.name).join(' / ') || track.artist?.name || '未知艺人' }}
-                    </div>
-                  </div>
                 </div>
               </div>
               <div class="track-right">
