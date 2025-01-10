@@ -1,188 +1,202 @@
 <template>
   <a-modal
     :visible="visible"
+    @update:visible="$emit('update:visible', $event)"
     :title="title"
-    width="800px"
+    @ok="handleOk"
     @cancel="handleCancel"
-    @ok="handleSubmit"
+    :confirmLoading="confirmLoading"
+    :width="800"
+    :bodyStyle="{
+      padding: '0',
+      height: '550px',
+      overflow: 'hidden'
+    }"
+    :wrapStyle="{
+      overflow: 'hidden'
+    }"
+    :centered="true"
+    wrapClassName="music-form-modal"
   >
-    <a-form
-      ref="formRef"
-      :model="formState"
-      :rules="rules"
-      layout="vertical"
-    >
-      <a-row :gutter="16">
-        <a-col :span="12">
-          <a-form-item label="标题" name="title">
-            <a-input v-model:value="formState.title" placeholder="请输入音乐标题" />
-          </a-form-item>
-        </a-col>
-        <a-col :span="12">
-          <a-form-item label="语言" name="language">
-            <a-select v-model:value="formState.language">
-              <a-select-option value="中文">中文</a-select-option>
-              <a-select-option value="英文">英文</a-select-option>
-              <a-select-option value="日文">日文</a-select-option>
-              <a-select-option value="韩文">韩文</a-select-option>
-              <a-select-option value="粤语">粤语</a-select-option>
-              <a-select-option value="闽南语">闽南语</a-select-option>
-              <a-select-option value="法语">法语</a-select-option>
-              <a-select-option value="西班牙语">西班牙语</a-select-option>
-              <a-select-option value="意大利语">意大利语</a-select-option>
-              <a-select-option value="德语">德语</a-select-option>
-              <a-select-option value="俄语">俄语</a-select-option>
-              <a-select-option value="其他">其他</a-select-option>
-            </a-select>
-          </a-form-item>
-        </a-col>
-      </a-row>
+    <div class="modal-scroll">
+      <a-form
+        ref="formRef"
+        :model="formState"
+        :rules="rules"
+        layout="vertical"
+      >
+        <a-row :gutter="16">
+          <a-col :span="12">
+            <a-form-item label="标题" name="title">
+              <a-input v-model:value="formState.title" placeholder="请输入音乐标题" />
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="语言" name="language">
+              <a-select v-model:value="formState.language">
+                <a-select-option value="中文">中文</a-select-option>
+                <a-select-option value="英文">英文</a-select-option>
+                <a-select-option value="日文">日文</a-select-option>
+                <a-select-option value="韩文">韩文</a-select-option>
+                <a-select-option value="粤语">粤语</a-select-option>
+                <a-select-option value="闽南语">闽南语</a-select-option>
+                <a-select-option value="法语">法语</a-select-option>
+                <a-select-option value="西班牙语">西班牙语</a-select-option>
+                <a-select-option value="意大利语">意大利语</a-select-option>
+                <a-select-option value="德语">德语</a-select-option>
+                <a-select-option value="俄语">俄语</a-select-option>
+                <a-select-option value="其他">其他</a-select-option>
+              </a-select>
+            </a-form-item>
+          </a-col>
+        </a-row>
 
-      <a-row :gutter="16">
-        <a-col :span="12">
-          <a-form-item label="艺人" name="artist_id">
-            <a-select
-              v-model:value="formState.artist_id"
-              placeholder="请选择艺人"
-              :loading="artistsLoading"
-              show-search
-              :options="artists.map(artist => ({
-                value: artist.id,
-                label: artist.name
-              }))"
-              :filter-option="false"
-              @search="handleArtistSearch"
-              @change="handleArtistChange"
-              style="width: 100%"
-              :default-value="formState.artist_id"
-            >
-              <template #notFoundContent>
-                <span v-if="artistsLoading">搜索中...</span>
-                <span v-else>未找到相关艺人</span>
-              </template>
-            </a-select>
-          </a-form-item>
-        </a-col>
-        <a-col :span="12">
-          <a-form-item label="专辑" name="album_id">
-            <a-select
-              v-model:value="formState.album_id"
-              placeholder="请选择专辑"
-              show-search
-              :loading="albumsLoading"
-              :options="albums"
-              :filter-option="false"
-              @search="handleAlbumSearch"
-              @change="handleAlbumChange"
-              style="width: 100%"
-              :default-value="formState.album_id"
-            >
-              <template #notFoundContent>
-                <span v-if="albumsLoading">搜索中...</span>
-                <span v-else>未找到相关专辑</span>
-              </template>
-            </a-select>
-          </a-form-item>
-        </a-col>
-      </a-row>
+        <a-row :gutter="16">
+          <a-col :span="12">
+            <a-form-item label="艺人" name="artist_id">
+              <a-select
+                v-model:value="formState.artist_id"
+                placeholder="请选择艺人"
+                :loading="artistsLoading"
+                show-search
+                :options="artists.map(artist => ({
+                  value: artist.id,
+                  label: artist.name
+                }))"
+                :filter-option="false"
+                @search="handleArtistSearch"
+                @change="handleArtistChange"
+                style="width: 100%"
+                :default-value="formState.artist_id"
+              >
+                <template #notFoundContent>
+                  <span v-if="artistsLoading">搜索中...</span>
+                  <span v-else>未找到相关艺人</span>
+                </template>
+              </a-select>
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="专辑" name="album_id">
+              <a-select
+                v-model:value="formState.album_id"
+                placeholder="请选择专辑"
+                show-search
+                :loading="albumsLoading"
+                :options="albums"
+                :filter-option="false"
+                @search="handleAlbumSearch"
+                @change="handleAlbumChange"
+                style="width: 100%"
+                :default-value="formState.album_id"
+              >
+                <template #notFoundContent>
+                  <span v-if="albumsLoading">搜索中...</span>
+                  <span v-else>未找到相关专辑</span>
+                </template>
+              </a-select>
+            </a-form-item>
+          </a-col>
+        </a-row>
 
-      <a-form-item label="标签" name="tags">
-        <a-select
-          v-model:value="formState.tags"
-          mode="multiple"
-          placeholder="请选择标签"
-          :loading="tagsLoading"
-          :options="tags.map(tag => ({
-            value: tag.name,
-            label: tag.name
-          }))"
-        />
-      </a-form-item>
+        <a-form-item label="标签" name="tags">
+          <a-select
+            v-model:value="formState.tags"
+            mode="multiple"
+            placeholder="请选择标签"
+            :loading="tagsLoading"
+            :options="tags.map(tag => ({
+              value: tag.name,
+              label: tag.name
+            }))"
+          />
+        </a-form-item>
 
-      <a-row :gutter="16">
-        <a-col :span="12">
-          <a-form-item label="音乐文件" name="url" required>
+        <a-row :gutter="16">
+          <a-col :span="12">
+            <a-form-item label="音乐文件" name="url" required>
+              <a-upload
+                v-model:file-list="audioFileList"
+                :before-upload="beforeAudioUpload"
+                :maxCount="1"
+                :auto-upload="false"
+              >
+                <a-button>
+                  <upload-outlined />上传音乐
+                </a-button>
+              </a-upload>
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="封面图" name="cover_image">
+              <a-upload
+                v-model:file-list="imageFileList"
+                :customRequest="handleImageUpload"
+                :before-upload="beforeImageUpload"
+                accept="image/*"
+                list-type="picture-card"
+                :maxCount="1"
+              >
+                <div v-if="imageFileList.length < 1">
+                  <plus-outlined />
+                  <div style="margin-top: 8px">上传</div>
+                </div>
+              </a-upload>
+            </a-form-item>
+          </a-col>
+        </a-row>
+
+        <a-form-item label="歌词">
+          <div class="lyrics-input-container">
+            <a-textarea
+              v-model:value="formState.lyrics"
+              :rows="6"
+              placeholder="请输入歌词"
+            />
             <a-upload
-              v-model:file-list="audioFileList"
-              :before-upload="beforeAudioUpload"
-              :maxCount="1"
-              :auto-upload="false"
+              accept=".lrc,.txt"
+              :before-upload="beforeLyricsUpload"
+              :customRequest="handleLyricsUpload"
+              :showUploadList="false"
             >
-              <a-button>
-                <upload-outlined />上传音乐
+              <a-button type="link">
+                <upload-outlined />
+                从文件导入
               </a-button>
             </a-upload>
-          </a-form-item>
-        </a-col>
-        <a-col :span="12">
-          <a-form-item label="封面图" name="cover_image">
+          </div>
+        </a-form-item>
+
+        <a-form-item label="翻译歌词">
+          <div class="lyrics-input-container">
+            <a-textarea
+              v-model:value="formState.lyrics_trans"
+              :rows="6"
+              placeholder="请输入翻译歌词"
+            />
             <a-upload
-              v-model:file-list="imageFileList"
-              :customRequest="handleImageUpload"
-              :before-upload="beforeImageUpload"
-              accept="image/*"
-              list-type="picture-card"
-              :maxCount="1"
+              accept=".lrc,.txt"
+              :before-upload="beforeLyricsUpload"
+              :customRequest="handleTransLyricsUpload"
+              :showUploadList="false"
             >
-              <div v-if="imageFileList.length < 1">
-                <plus-outlined />
-                <div style="margin-top: 8px">上传</div>
-              </div>
+              <a-button type="link">
+                <upload-outlined />
+                从文件导入
+              </a-button>
             </a-upload>
-          </a-form-item>
-        </a-col>
-      </a-row>
+          </div>
+        </a-form-item>
 
-      <a-form-item label="歌词">
-        <div class="lyrics-input-container">
+        <a-form-item label="描述" name="description">
           <a-textarea
-            v-model:value="formState.lyrics"
-            :rows="6"
-            placeholder="请输入歌词"
+            v-model:value="formState.description"
+            :rows="4"
+            placeholder="请输入音乐描述"
           />
-          <a-upload
-            accept=".lrc,.txt"
-            :before-upload="beforeLyricsUpload"
-            :customRequest="handleLyricsUpload"
-            :showUploadList="false"
-          >
-            <a-button type="link">
-              <upload-outlined />
-              从文件导入
-            </a-button>
-          </a-upload>
-        </div>
-      </a-form-item>
-
-      <a-form-item label="翻译歌词">
-        <div class="lyrics-input-container">
-          <a-textarea
-            v-model:value="formState.lyrics_trans"
-            :rows="6"
-            placeholder="请输入翻译歌词"
-          />
-          <a-upload
-            accept=".lrc,.txt"
-            :before-upload="beforeLyricsUpload"
-            :customRequest="handleTransLyricsUpload"
-            :showUploadList="false"
-          >
-            <a-button type="link">
-              <upload-outlined />
-              从文件导入
-            </a-button>
-          </a-upload>
-        </div>
-      </a-form-item>
-
-      <a-form-item label="描述" name="description">
-        <a-textarea
-          v-model:value="formState.description"
-          :rows="4"
-          placeholder="请输入音乐描述"
-        />
-      </a-form-item>
-    </a-form>
+        </a-form-item>
+      </a-form>
+    </div>
   </a-modal>
 </template>
 
@@ -829,5 +843,35 @@ const handleTransLyricsUpload = async (options: any) => {
 
 .lyrics-input-container .ant-upload {
   align-self: flex-end;
+}
+
+.modal-scroll {
+  height: 100%;
+  overflow-y: auto;
+  padding: 24px;
+}
+
+:deep(.music-form-modal) {
+  .ant-modal-content {
+    margin: 0;
+  }
+  
+  .ant-modal-body {
+    padding: 0;
+  }
+}
+
+/* 自定义滚动条样式 */
+.modal-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.modal-scroll::-webkit-scrollbar-thumb {
+  background-color: #d9d9d9;
+  border-radius: 3px;
+}
+
+.modal-scroll::-webkit-scrollbar-track {
+  background-color: #f5f5f5;
 }
 </style> 

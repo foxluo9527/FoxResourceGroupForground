@@ -242,6 +242,70 @@
           </a-list>
         </div>
       </a-modal>
+
+      <!-- 属性选择弹窗 -->
+      <a-modal
+        v-model:visible="propertyModalVisible"
+        title="选择要更新的属性"
+        @ok="handlePropertyUpdate"
+        :width="900"
+        :mask="true"
+        :maskClosable="false"
+        :keyboard="false"
+        :centered="true"
+        :bodyStyle="{
+          padding: '0',
+          height: '550px',
+          overflow: 'hidden'
+        }"
+        wrapClassName="property-modal"
+      >
+        <div class="compare-header">
+          <div class="header-cell">当前值</div>
+          <div class="header-cell">搜索结果</div>
+        </div>
+        <div style="height: calc(100% - 41px); overflow-y: auto; padding: 0 16px;">
+          <a-checkbox-group v-model:value="selectedProperties">
+            <div v-if="newMusicInfo" class="property-item" v-for="(key, index) in availableProperties" :key="index">
+              <div class="property-label">
+                <a-checkbox :value="key">{{ propertyLabels[key] }}</a-checkbox>
+              </div>
+              <div class="property-content">
+                <div class="old-value">
+                  <a-descriptions :column="1" size="small" :bordered="true">
+                    <a-descriptions-item>
+                      <template #label>{{ propertyLabels[key] }}</template>
+                      <div class="value-content" :class="getValueClass(key)">
+                        {{ formatValue(currentMusic[key]) }}
+                      </div>
+                    </a-descriptions-item>
+                  </a-descriptions>
+                </div>
+                <div class="new-value">
+                  <a-descriptions :column="1" size="small" :bordered="true">
+                    <a-descriptions-item>
+                      <template #label>{{ propertyLabels[key] }}</template>
+                      <a-input
+                        v-if="!isComplexValue(newMusicInfo[key])"
+                        v-model:value="editableValues[key]"
+                        :placeholder="`请输入${propertyLabels[key]}`"
+                      />
+                      <a-textarea
+                        v-else
+                        v-model:value="editableValues[key]"
+                        :placeholder="`请输入${propertyLabels[key]} (JSON格式)`"
+                        :status="isValidJson(editableValues[key]) ? '' : 'error'"
+                        class="json-textarea"
+                        :class="getTextareaClass(key)"
+                      />
+                    </a-descriptions-item>
+                  </a-descriptions>
+                </div>
+              </div>
+            </div>
+          </a-checkbox-group>
+        </div>
+      </a-modal>
     </div>
   </a-modal>
 </template>
@@ -900,24 +964,18 @@ const refreshMusicInfo = async (record: MusicItem, index: number) => {
         })
 
         if (searchResponse.success && searchResponse.data?.items?.[0]) {
-          const updatedItem = {
-            ...searchResponse.data.items[0],
-            uploadFile: record.uploadFile,
-            url: record.url,
-            tags: searchResponse.data.items[0].tags || [],
-            singers: searchResponse.data.items[0].singers || [],
-            singer: searchResponse.data.items[0].singers?.[0] || searchResponse.data.items[0].singer,
-            album: searchResponse.data.items[0].album || null,
-            language: searchResponse.data.items[0].language || '未知',
-            duration: searchResponse.data.items[0].duration || 0,
-            cover_image: searchResponse.data.items[0].album?.cover_image || searchResponse.data.items[0].cover_image || defaultCover,
-            lrc: searchResponse.data.items[0].lrc || { lyric: '', lyric_trans: '' }
-          }
-
-          // 更新列表中的数据
-          searchResults.value[index] = updatedItem
-          selectedSongs.value = [...searchResults.value]
-          message.success('刷新成功')
+          console.log('searchResponse', searchResponse)
+          // 保存当前音乐信息和新音乐信息
+          currentMusic.value = { ...record }
+          newMusicInfo.value = searchResponse.data.items[0]
+          // 默认选中所有发生变化的属性
+          selectedProperties.value = availableProperties.filter(key => {
+            if (key === 'singers') {
+              return record.singers?.length !== searchResponse.data.items[0].singers?.length
+            }
+            return record[key] !== searchResponse.data.items[0][key]
+          })
+          propertyModalVisible.value = true
         } else {
           message.warning('未找到相关音乐信息')
         }
@@ -925,9 +983,38 @@ const refreshMusicInfo = async (record: MusicItem, index: number) => {
         console.error('刷新音乐信息失败:', error)
         message.error('刷新失败')
       }
-    },
-    onCancel() {}
+    }
   })
+}
+
+// 处理属性更新
+const handlePropertyUpdate = () => {
+  if (!currentMusic.value || !newMusicInfo.value) return
+  
+  const updatedItem = { ...currentMusic.value }
+  selectedProperties.value.forEach(key => {
+    try {
+      const value = editableValues.value[key]
+      if (isComplexValue(newMusicInfo.value[key])) {
+        if (isValidJson(value)) {
+          updatedItem[key] = JSON.parse(value)
+        }
+      } else {
+        updatedItem[key] = value
+      }
+    } catch (e) {
+      console.error(`更新属性 ${key} 失败:`, e)
+    }
+  })
+  
+  const index = searchResults.value.findIndex(item => item.id === currentMusic.value.id)
+  if (index !== -1) {
+    searchResults.value[index] = updatedItem
+    selectedSongs.value = [...searchResults.value]
+    message.success('更新成功')
+  }
+  
+  propertyModalVisible.value = false
 }
 
 // 修改清理函数
@@ -1128,6 +1215,95 @@ onUnmounted(() => {
     }
   })
   musicResourceMap.value.clear()
+})
+
+// 添加属性选择相关的状态
+const propertyModalVisible = ref(false)
+const selectedProperties = ref<string[]>([])
+const newMusicInfo = ref<any>(null)
+const currentMusic = ref<any>(null)
+
+// 可选属性列表
+const availableProperties = [
+  'title',
+  'singers',
+  'album',
+  'description',
+  'language',
+  'lrc'
+]
+
+// 属性标签映射
+const propertyLabels: Record<string, string> = {
+  title: '歌曲名称',
+  singers: '歌手',
+  album: '专辑',
+  description: '描述',
+  language: '语言',
+  lrc: '歌词'
+}
+
+// 添加可编辑 JSON 相关的状态
+const editableValues = ref<Record<string, string>>({})
+
+// 格式化显示值
+const formatValue = (value: any): string => {
+  if (value === null || value === undefined) return '无'
+  if (typeof value === 'object') {
+    return JSON.stringify(value, null, 2)
+  }
+  return String(value)
+}
+
+// 判断是否为复杂值（需要JSON编辑）
+const isComplexValue = (value: any): boolean => {
+  return value !== null && typeof value === 'object'
+}
+
+// 验证 JSON 格式
+const isValidJson = (str: string): boolean => {
+  if (!str) return true
+  try {
+    JSON.parse(str)
+    return true
+  } catch (e) {
+    return false
+  }
+}
+
+// 初始化编辑值
+watch(() => newMusicInfo.value, (val) => {
+  if (val) {
+    editableValues.value = Object.keys(val).reduce((acc, key) => {
+      const value = val[key]
+      acc[key] = isComplexValue(value) ? JSON.stringify(value, null, 2) : String(value ?? '')
+      return acc
+    }, {} as Record<string, string>)
+  }
+}, { immediate: true })
+
+// 获取值展示区域的类名
+const getValueClass = (key: string): string => {
+  const classes = ['complex-value']
+  if (key === 'lrc') classes.push('lrc-value')
+  if (['singers', 'album'].includes(key)) classes.push('object-value')
+  return classes.join(' ')
+}
+
+// 获取文本框的类名
+const getTextareaClass = (key: string): string => {
+  if (key === 'lrc') return 'lrc-textarea'
+  if (['singers', 'album'].includes(key)) return 'object-textarea'
+  return ''
+}
+
+// 添加/移除防止页面滚动的类
+watch(() => propertyModalVisible.value, (visible) => {
+  if (visible) {
+    document.body.classList.add('property-modal-open')
+  } else {
+    document.body.classList.remove('property-modal-open')
+  }
 })
 </script>
 
@@ -1376,5 +1552,121 @@ onUnmounted(() => {
 
 :global(.file-confirm-modal .ant-list-item) {
   padding: 8px 16px;
+}
+
+.compare-header {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  padding: 8px 16px;
+  background: #fafafa;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.header-cell {
+  font-weight: 500;
+  color: rgba(0, 0, 0, 0.85);
+  text-align: center;
+}
+
+.property-item {
+  padding: 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.property-label {
+  margin-bottom: 8px;
+}
+
+.property-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.old-value,
+.new-value {
+  display: flex;
+  flex-direction: column;
+}
+
+.value-content {
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.value-content.complex-value {
+  font-family: monospace;
+  background: #fafafa;
+  padding: 8px;
+  border-radius: 4px;
+}
+
+.value-content.object-value {
+  height: 120px;
+}
+
+.value-content.lrc-value {
+  height: 200px;
+}
+
+:deep(.json-textarea) {
+  resize: none !important;
+  font-family: monospace;
+}
+
+:deep(.object-textarea) {
+  height: 120px !important;
+}
+
+:deep(.lrc-textarea) {
+  height: 200px !important;
+}
+
+:deep(.ant-descriptions-bordered) {
+  background: #fff;
+}
+
+:deep(.ant-descriptions-item-label) {
+  width: 100px;
+  background: #fafafa;
+}
+
+:deep(.ant-descriptions-item-content) {
+  padding: 8px 12px !important;
+}
+
+:deep(.ant-input) {
+  font-family: monospace;
+}
+
+:deep(.ant-input-textarea-show-count::after) {
+  margin-top: 4px;
+}
+
+:deep(.property-modal) {
+  .ant-modal-content {
+    margin: 0;
+  }
+
+  .ant-modal-body {
+    padding: 0;
+  }
+}
+
+/* 自定义滚动条样式 */
+:deep(.ant-modal-body)::-webkit-scrollbar {
+  width: 6px;
+}
+
+:deep(.ant-modal-body)::-webkit-scrollbar-thumb {
+  background-color: #d9d9d9;
+  border-radius: 3px;
+}
+
+:deep(.ant-modal-body)::-webkit-scrollbar-track {
+  background-color: #f5f5f5;
 }
 </style> 
