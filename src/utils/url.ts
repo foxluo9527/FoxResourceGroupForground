@@ -1,11 +1,11 @@
 // 获取 API 基础 URL
 export const getBaseUrl = () => {
-  return `http://39.106.30.151:9000/`
+  return `http://39.106.30.151:9000`
 }
 
 // 获取资源 URL
 export const getResourceUrl = () => {
-  return `http://39.106.30.151:9000/`
+  return `http://39.106.30.151:9000`
 }
 
 // 获取完整的资源 URL
