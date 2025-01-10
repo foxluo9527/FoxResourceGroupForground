@@ -1,6 +1,6 @@
 import { useUserStore } from '@/store/user'
 import { ref } from 'vue'
-
+import { getWsBaseUrl } from './url'
 interface Notification {
   id: number
   user_id: number
@@ -49,7 +49,7 @@ class WebSocketService {
     try {
       const cleanToken = token.replace('Bearer ', '')
       console.log('Token:', cleanToken.substring(0, 20) + '...')
-      const wsUrl = `ws://39.106.30.151:9000/ws?token=${cleanToken}`
+      const wsUrl = `${getWsBaseUrl()}?token=${cleanToken}`
       console.log('尝试连接 WebSocket:', wsUrl)
       this.ws = new WebSocket(wsUrl)
 

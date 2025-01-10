@@ -1,6 +1,22 @@
+export const setLocalServerIp = (ip: string) => {
+  localStorage.setItem('localServerIp', ip)
+}
+
+export const getLocalServerIp = () => {
+  return localStorage.getItem('localServerIp') || '192.168.3.27'
+}
+
+export const setUseLocalServer = (value: boolean) => {
+  localStorage.setItem('useLocalServer', value.toString())
+}
+
+export const getUseLocalServer = () => {
+  return localStorage.getItem('useLocalServer') === 'true'
+}
+
 // 获取 API 基础 URL
 export const getBaseUrl = () => {
-  return `http://39.106.30.151:9000`
+  return `http://${getUseLocalServer() ? getLocalServerIp() : '39.106.30.151'}:9000`
 }
 
 // 获取资源 URL
@@ -41,5 +57,5 @@ export const getFullUrl = (path: string | any) => {
 
 // 获取 WebSocket 基础 URL
 export const getWsBaseUrl = () => {
-  return `ws://39.106.30.151:9000/ws`
+  return `ws://${getUseLocalServer() ? getLocalServerIp() : '39.106.30.151'}:9000/ws`
 } 

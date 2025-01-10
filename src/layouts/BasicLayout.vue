@@ -51,6 +51,9 @@
             @click="() => (collapsed = !collapsed)"
           />
           <div class="header-right">
+            <a-tooltip placement="bottom" title="通过本地代理服务器，可使用sftp传输文件，速度更快更安全">
+              <a-button @click="showProxySettings" type="link">代理设置</a-button>
+            </a-tooltip>
             <a-dropdown>
               <div class="user-dropdown">
                 <a-avatar :src="userInfo?.avatar">
@@ -103,6 +106,16 @@
         </a-layout-content>
       </a-layout>
     </a-layout>
+    <a-modal v-model:visible="isModalVisible" title="代理设置" @ok="saveSettings" @cancel="closeModal">
+      <a-form :model="proxySettings" layout="vertical">
+        <a-form-item label="使用本地代理">
+          <a-switch v-model:checked="proxySettings.useLocalServer" />
+        </a-form-item>
+        <a-form-item label="代理 IP">
+          <a-input v-model:value="proxySettings.localServerIp" placeholder="输入代理 IP" />
+        </a-form-item>
+      </a-form>
+    </a-modal>
   </a-layout>
 </template>
 
@@ -121,6 +134,8 @@ import NotificationBanner from '@/components/NotificationBanner.vue'
 import { wsService } from '@/utils/websocket'
 import { useTabStore } from '@/store/tabs'
 import { service } from '@/utils/request'
+import { getLocalServerIp, getUseLocalServer, setLocalServerIp, setUseLocalServer } from '@/utils/url'
+import { message } from 'ant-design-vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -131,6 +146,11 @@ const openKeys = ref<string[]>([])
 const notificationBannerRef = ref()
 const tabStore = useTabStore()
 const userInfo = ref(null)
+const isModalVisible = ref(false)
+const proxySettings = ref({
+  useLocalServer: getUseLocalServer(),
+  localServerIp: getLocalServerIp()
+})
 
 const handleLogout = async () => {
   await userStore.logout()
@@ -211,6 +231,30 @@ const fetchUserInfo = async () => {
 // 跳转到个人主页
 const goToProfile = () => {
   router.push('/profile')
+}
+
+const showProxySettings = () => {
+  proxySettings.value.useLocalServer = getUseLocalServer()
+  proxySettings.value.localServerIp = getLocalServerIp()
+  isModalVisible.value = true
+}
+
+const closeModal = () => {
+  isModalVisible.value = false
+}
+
+const saveSettings = () => {
+  setUseLocalServer(proxySettings.value.useLocalServer)
+  setLocalServerIp(proxySettings.value.localServerIp)
+  closeModal()
+  
+  // 使用 message 组件替代 alert
+  message.success('设置已保存，正在刷新页面...')
+  
+  // 延迟一下再刷新，让用户看到成功提示
+  setTimeout(() => {
+    window.location.reload()
+  }, 1000)
 }
 
 onMounted(() => {
@@ -342,7 +386,13 @@ onMounted(() => {
 }
 
 .header-right {
-  margin-right: 24px;
+  display: flex;
+  align-items: center; /* 垂直居中对齐 */
+  margin-right: 24px; /* 右侧间距 */
+}
+
+.header-right a-button {
+  margin-right: 8px; /* 按钮与用户信息之间的间距 */
 }
 
 .ant-dropdown-link {
@@ -368,4 +418,4 @@ onMounted(() => {
   display: flex;
   align-items: center;
 }
-</style> 
+</style>

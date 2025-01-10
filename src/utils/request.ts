@@ -15,7 +15,7 @@ interface Response<T = any> {
 
 export const service: AxiosInstance = axios.create({
   baseURL: getBaseUrl(),
-  timeout: 30000,
+  timeout: 60000,
   transformResponse: [
     ...(axios.defaults.transformResponse as any[]),
     (data) => {
@@ -104,6 +104,8 @@ export const service: AxiosInstance = axios.create({
 // 请求拦截器
 service.interceptors.request.use(
   (config) => {
+    // 每次请求时重新获取 baseURL
+    config.baseURL = getBaseUrl()
     const token = getToken()
     if (token && config.headers) {
       // 检查 token 是否已经包含 Bearer 前缀
